@@ -123,7 +123,7 @@
     <audio id="successSound" src="https://raw.githubusercontent.com/rafgim2/ARCapitals/main/acierto.wav" preload="auto"></audio>
     <audio id="errorSound" src="https://raw.githubusercontent.com/rafgim2/ARCapitals/main/error.wav" preload="auto"></audio>
     <audio id="timerSound" src="https://raw.githubusercontent.com/rafgim2/ARCapitals/main/timer7.mp3" preload="auto"></audio>
-    <!-- Nota: beepSound usa el mismo archivo que errorSound en este ejemplo -->
+    <!-- Nota: actualmente, beepSound usa el mismo archivo que errorSound -->
     <audio id="beepSound" src="https://raw.githubusercontent.com/rafgim2/ARCapitals/main/error.wav" preload="auto"></audio>
 
     <script type="module">
@@ -222,11 +222,11 @@
       let correctResponseTimes = [];
       let leaderboardResults = [];
       let playerPosition = null;
+      // NUEVO: añadimos exitButtonMesh además del restartButtonMesh
+      let leaderboardMesh = null, restartButtonMesh = null, exitButtonMesh = null;
+
       let gameStartTime = 0;
       let playerName = "";
-
-      // NUEVO: variables para scoreboard final
-      let leaderboardMesh = null, restartButtonMesh = null, exitButtonMesh = null;
 
       function drawRoundedRect(ctx, x, y, w, h, r) {
         ctx.beginPath();
@@ -248,10 +248,7 @@
         texture.minFilter = THREE.LinearFilter;
         texture.magFilter = THREE.LinearFilter;
         const geometry = new THREE.PlaneGeometry(width, height);
-        const material = new THREE.MeshBasicMaterial({
-          map: texture,
-          transparent: true
-        });
+        const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
         const mesh = new THREE.Mesh(geometry, material);
         mesh.userData = { canvas, ctx, texture };
         return mesh;
@@ -290,7 +287,7 @@
         if (!gameOver) {
           objectsToIntersect = answers;
         } else {
-          // Cuando gameOver = true, considera "reiniciar" y "salir"
+          // En estado final, consideramos reiniciar + salir
           objectsToIntersect = [];
           if (restartButtonMesh) objectsToIntersect.push(restartButtonMesh);
           if (exitButtonMesh) objectsToIntersect.push(exitButtonMesh);
@@ -300,7 +297,6 @@
           const objHit = intersects[0].object;
           hasCollided = true;
           if (!gameOver) {
-            // Respuestas
             if (objHit.userData.answer === correctAnswer) {
               let responseTime = performance.now() - currentQuestionStartTime;
               correctResponseTimes.push(responseTime);
@@ -327,7 +323,7 @@
               }, 500);
             }
           } else {
-            // Botones finales
+            // Colisión con los botones finales
             if (objHit === restartButtonMesh) {
               playSound('successSound');
               createSparksEffect(objHit.position);
@@ -336,15 +332,14 @@
                 restartGame();
                 hasCollided = false;
               }, 1000);
-            } 
-            // NUEVO: Botón “Salir”
-            else if (objHit === exitButtonMesh) {
+
+            } else if (objHit === exitButtonMesh) {
+              // NUEVO: Botón SALIR => recarga la página a los 2s
               playSound('successSound');
               createSparksEffect(objHit.position);
               objHit.visible = false;
               setTimeout(() => {
-                // Recarga la página tras 2s
-                location.reload();
+                location.reload(); // recarga la página
                 hasCollided = false;
               }, 2000);
             }
@@ -376,7 +371,7 @@
 
         window.addEventListener('resize', onWindowResize);
 
-        // Overlay inicial: imagen, link, selector de respuestas, leaderboard preview e input de nombre
+        // Overlay inicial
         const overlay = document.createElement('div');
         overlay.id = 'overlay';
         overlay.innerHTML = `
@@ -398,7 +393,7 @@
           <input type="text" id="playerName" placeholder="Ingresa tu nombre" style="padding:10px; font-size:16px; margin-bottom:20px;" maxlength="10">
         `;
 
-        // Botón AR (se mantiene igual)
+        // Botón AR (igual que antes)
         const arButton = ARButton.createButton(renderer, { 
           requiredFeatures: ['hit-test'],
           optionalFeatures: ['hand-tracking']
@@ -414,7 +409,7 @@
         arButton.style.color = 'white';
         overlay.appendChild(arButton);
 
-        // BOTÓN ADICIONAL: Iniciar versión HTML debajo del botón AR
+        // BOTÓN ADICIONAL: Iniciar versión HTML
         const htmlButton = document.createElement('button');
         htmlButton.innerText = "Iniciar versión HTML";
         htmlButton.style.fontSize = '16px';
@@ -513,6 +508,31 @@
           for (let i = 0; i < selectedNumAnswers; i++) {
             updateAnswerPanel(answers[i], array[i]);
           }
+          const radius = 0.8;
+          const uniformGap = 0.1;
+          let alphas = [];
+          for (let i = 0; i < selectedNumAnswers; i++) {
+            let panelWidth = answers[i].userData.panelWidth;
+            let alpha = Math.atan((panelWidth / 2) / radius);
+            alphas.push(alpha);
+          }
+          let totalSpan = alphas[0] + alphas[selectedNumAnswers - 1] + uniformGap * (selectedNumAnswers - 1);
+          for (let i = 0; i < selectedNumAnswers - 1; i++) {
+            totalSpan += alphas[i] + alphas[i + 1];
+          }
+          let theta = [];
+          theta[0] = -totalSpan / 2 + alphas[0];
+          for (let i = 0; i < selectedNumAnswers - 1; i++) {
+            theta[i + 1] = theta[i] + alphas[i] + uniformGap + alphas[i + 1];
+          }
+          for (let i = 0; i < selectedNumAnswers; i++) {
+            answers[i].position.set(
+              radius * Math.sin(theta[i]),
+              answers[i].position.y,
+              -radius * Math.cos(theta[i])
+            );
+            answers[i].lookAt(initialCameraPos);
+          }
         }
       }
 
@@ -541,16 +561,15 @@
         const texture = new THREE.CanvasTexture(canvas);
         texture.minFilter = THREE.LinearFilter;
         texture.magFilter = THREE.LinearFilter;
+        const scaleFactor = 0.15 / (256 * resolutionFactor);
+        const newWidth = canvas.width * scaleFactor;
+        const newHeight = canvas.height * scaleFactor;
+
         mesh.material.map = texture;
         mesh.material.needsUpdate = true;
-
-        // Recalcular geometry según tamaño del texto
         mesh.geometry.dispose();
-        const scaleFactor = 0.15 / (256 * resolutionFactor);
-        const newWidth = canvasWidth * scaleFactor;
-        const newHeight = canvasHeight * scaleFactor;
         mesh.geometry = new THREE.PlaneGeometry(newWidth, newHeight);
-
+        mesh.userData.panelWidth = newWidth;
         mesh.userData.answer = value;
       }
 
@@ -769,7 +788,6 @@
         { country: "Zambia", capital: "Lusaka" },
         { country: "Zimbabue", capital: "Harare" }
       ];
-
       function generateQuestion() {
         const rnd = Math.floor(Math.random() * countries.length);
         const item = countries[rnd];
@@ -822,7 +840,12 @@
         ctx.textBaseline = "middle";
         ctx.fillText(seconds < 10 ? "00:0" + seconds : "00:" + seconds, canvas.width / 2, canvas.height / 2);
         texture.needsUpdate = true;
-        // beepSound no lo estamos usando en este ejemplo; si lo usaras, manejar beepPlayed etc.
+        if (remaining <= -10 && !beepPlayed) {
+          const beepSound = document.getElementById('beepSound');
+          beepSound.currentTime = 0;
+          beepSound.play().catch(e => {});
+          beepPlayed = true;
+        }
         return remaining;
       }
 
@@ -962,7 +985,7 @@
             }
           }
         } else {
-          // En estado final, colisiones con reiniciar y salir
+          // En estado final, detectar colisiones con el botón Reiniciar y Salir
           if (restartButtonMesh || exitButtonMesh) {
             let finalButtons = [];
             if (restartButtonMesh) finalButtons.push(restartButtonMesh);
@@ -973,9 +996,10 @@
               const btnPos = new THREE.Vector3();
               btn.getWorldPosition(btnPos);
               for (const pt of interactionPoints) {
-                const dist = btnPos.distanceTo(pt);
-                if (dist < collisionThreshold && !hasCollided) {
+                if (btnPos.distanceTo(pt) < collisionThreshold && !hasCollided) {
                   hasCollided = true;
+
+                  // REINICIAR
                   if (btn === restartButtonMesh) {
                     playSound('successSound');
                     createSparksEffect(btn.position);
@@ -984,9 +1008,9 @@
                       restartGame();
                       hasCollided = false;
                     }, 1000);
-                  }
-                  // NUEVO: Botón “Salir”
-                  else if (btn === exitButtonMesh) {
+
+                  // SALIR => recarga la página
+                  } else if (btn === exitButtonMesh) {
                     playSound('successSound');
                     createSparksEffect(btn.position);
                     btn.visible = false;
@@ -995,7 +1019,7 @@
                       hasCollided = false;
                     }, 2000);
                   }
-                  break;
+                  return;
                 }
               }
             }
@@ -1033,6 +1057,7 @@
         leaderboardMesh = null;
         restartButtonMesh = null;
         exitButtonMesh = null;
+
         leaderboardResults = [];
         playerPosition = null;
         if (questionMesh) {
@@ -1055,6 +1080,7 @@
         timerSound.play().catch(e => {});
       }
 
+      // Se crea el leaderboard y también un botón "Salir" a la derecha
       function createLeaderboardMesh() {
         if (leaderboardMesh) scene.remove(leaderboardMesh);
         if (restartButtonMesh) scene.remove(restartButtonMesh);
@@ -1080,17 +1106,18 @@
         leaderboardMesh.position.set(0, 0, -1.2);
         scene.add(leaderboardMesh);
 
-        // Botón REINICIAR a la izquierda
+        // Botón "Reiniciar" a la izquierda
         restartButtonMesh = createButton("Reiniciar");
         restartButtonMesh.position.set(-planeWidth / 2 - 0.1, 0, -1.1);
         scene.add(restartButtonMesh);
 
-        // NUEVO: Botón SALIR a la derecha
+        // NUEVO: Botón "Salir" a la derecha
         exitButtonMesh = createButton("Salir");
         exitButtonMesh.position.set(planeWidth / 2 + 0.1, 0, -1.1);
         scene.add(exitButtonMesh);
       }
 
+      // Dibujar la tabla de clasificación
       function drawLeaderboardSegment() {
         if (!leaderboardMesh) return;
         const { canvas, ctx, texture, planeWidth } = leaderboardMesh.userData;
@@ -1121,7 +1148,7 @@
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
         ctx.fillText(`Tabla de Clasificación`, canvasWidth / 2, headerHeight / 2);
-        // Dibujar cabecera de columnas
+        // Cabecera
         const xPosPos   = 0.10 * canvasWidth;
         const xPosName  = 0.40 * canvasWidth;
         const xPosScore = 0.75 * canvasWidth;
