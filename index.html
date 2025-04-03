@@ -853,7 +853,6 @@
             // Detección de colisiones con los botones (final del juego)
             let finalButtons = [];
             if (restartButtonMesh) finalButtons.push(restartButtonMesh);
-            // NUEVO: añadir exitButtonMesh a la lista de botones finales
             if (exitButtonMesh) finalButtons.push(exitButtonMesh);
 
             for (const btn of finalButtons) {
@@ -878,18 +877,16 @@
                       hasCollided = false;
                     }, 1000);
 
-                  // NUEVO: Botón SALIR
+                  // NUEVO: Botón SALIR => recarga la página a los 2s
                   } else if (btn === exitButtonMesh) {
                     const successSound = document.getElementById("successSound");
                     const successClone = successSound.cloneNode();
                     successClone.play().catch(e => console.error(e));
                     createSparksEffect(btn.position);
                     btn.visible = false;
-                    // Tras 2s, salir de AR
+                    // Tras 2s, recargar la página
                     setTimeout(() => {
-                      if (renderer.xr && renderer.xr.getSession()) {
-                        renderer.xr.getSession().end().catch(err => console.error(err));
-                      }
+                      location.reload();
                       hasCollided = false;
                     }, 2000);
                   }
@@ -961,8 +958,6 @@
         function createLeaderboardMesh() {
           if (leaderboardMesh) scene.remove(leaderboardMesh);
           if (restartButtonMesh) scene.remove(restartButtonMesh);
-
-          // NUEVO: si existiera exitButtonMesh, también eliminarlo antes de crearlo de nuevo
           if (exitButtonMesh) scene.remove(exitButtonMesh);
 
           leaderboardMesh = null;
@@ -1097,17 +1092,16 @@
                   restartGame();
                   hasCollided = false;
                 }, 1000);
+
               } else if (objHit === exitButtonMesh) {
                 const successSound = document.getElementById("successSound");
                 const successClone = successSound.cloneNode();
                 successClone.play().catch(e => console.error(e));
                 createSparksEffect(objHit.position);
                 objHit.visible = false;
-                // Tras 2s, salir de AR
+                // Tras 2s, recargar la página
                 setTimeout(() => {
-                  if (renderer.xr && renderer.xr.getSession()) {
-                    renderer.xr.getSession().end().catch(err => console.error(err));
-                  }
+                  location.reload();
                   hasCollided = false;
                 }, 2000);
               }
