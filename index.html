@@ -1,33 +1,37 @@
 <!DOCTYPE html>
 <html lang="es">
   <head>
-    <meta charset="utf-8">
-    <title>AR Notas Musicales</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8" />
+    <title>AR Capitals Game / HTML Capitals Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <style>
-      body { margin: 0; overflow: hidden; font-family: sans-serif; }
-      /* Overlay del menú inicial */
+      /* Estilos generales (compartidos para AR y HTML) */
+      body {
+        margin: 0;
+        font-family: sans-serif;
+        overflow-y: auto;
+      }
+      /* Estilos del overlay inicial */
       #overlay {
         position: absolute;
-        padding-top: 100px;
         top: 0;
         left: 0;
         width: 100%;
-        height: 100%;
-        background-color: #FFFFE0; /* amarillo claro */
+        min-height: 100vh;
+        background-color: #fffa9c;
         display: flex;
         flex-direction: column;
         justify-content: flex-start;
         align-items: center;
-        color: #fff;
         text-align: center;
         z-index: 10;
+        overflow-y: auto;
         box-sizing: border-box;
         padding: 20px;
       }
       #overlay a {
         font-size: 14px;
-        margin-top: -10px;
+        margin-top: 10px;
         margin-bottom: 20px;
         color: blue;
         text-decoration: none;
@@ -48,8 +52,15 @@
       #overlay img {
         border-radius: 20px;
         max-width: 15%;
+        margin-top: 50px;
+        margin-bottom: 10px;
       }
-      /* Tabla preview (leaderboard) */
+      @media (orientation: portrait) {
+        #overlay img {
+          max-width: 70%;
+        }
+      }
+      /* Leaderboard preview en el overlay */
       #leaderboardPreview {
         max-width: 80%;
         max-height: 120px;
@@ -71,18 +82,37 @@
         padding: 4px;
         text-align: center;
       }
-      @media (orientation: portrait) {
-        #overlay img {
-          max-width: 70%;
-        }
-      }
-      /* Estilos para la versión HTML */
+      /* Estilos del contenedor HTML para el modo no AR */
       #gameContainer {
+        position: relative;
+        width: 100%;
+        min-height: 100vh;
+        background-color: #f0f0f0;
+        color: #000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
         padding: 20px;
-        text-align: center;
-        overflow-y: auto;
+        box-sizing: border-box;
+      }
+      #gameContainer div, #gameContainer button {
+        margin-bottom: 20px;
       }
       #gameContainer button {
+        font-size: 24px;
+        padding: 10px 20px;
+      }
+      #gameContainer table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      #gameContainer th, #gameContainer td {
+        border: 1px solid #666;
+        padding: 4px;
+        text-align: center;
+      }
+      button, input {
         -webkit-appearance: none;
         border-radius: 6px;
       }
@@ -90,16 +120,17 @@
   </head>
   <body>
     <!-- Audios -->
-    <audio id="successSound" src="https://raw.githubusercontent.com/rafgim2/ARMusic/main/acierto.wav" preload="auto"></audio>
-    <audio id="errorSound" src="https://raw.githubusercontent.com/rafgim2/ARMusic/main/error.wav" preload="auto"></audio>
-    <audio id="timerSound" src="https://raw.githubusercontent.com/rafgim2/ARMusic/main/timer7.mp3" preload="auto"></audio>
-    <audio id="beepSound" src="https://raw.githubusercontent.com/rafgim2/ARMultimusic/main/beep.wav" preload="auto"></audio>
+    <audio id="successSound" src="https://raw.githubusercontent.com/rafgim2/ARCapitals/main/acierto.wav" preload="auto"></audio>
+    <audio id="errorSound" src="https://raw.githubusercontent.com/rafgim2/ARCapitals/main/error.wav" preload="auto"></audio>
+    <audio id="timerSound" src="https://raw.githubusercontent.com/rafgim2/ARCapitals/main/timer7.mp3" preload="auto"></audio>
+    <!-- Nota: actualmente, beepSound usa el mismo archivo que errorSound -->
+    <audio id="beepSound" src="https://raw.githubusercontent.com/rafgim2/ARCapitals/main/error.wav" preload="auto"></audio>
 
     <script type="module">
-      /***** 1) Firebase y Firestore (colecciones "Musicleaderboard_X") *****/
+      /***** 1) Firebase y Firestore *****/
       import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
       import { getAnalytics } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-analytics.js";
-      import {
+      import { 
         getFirestore, collection, addDoc, orderBy, getDocs, serverTimestamp,
         query, where, limit, updateDoc, doc
       } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore.js";
@@ -118,8 +149,9 @@
       const analytics = getAnalytics(appFirebase);
       const db = getFirestore(appFirebase);
 
+      /***** 2) Función para actualizar el leaderboard preview en el overlay *****/
       async function updateLeaderboardPreview(numAnswers) {
-        const collectionName = `Musicleaderboard_${numAnswers}`;
+        const collectionName = `Capleaderboard_${numAnswers}`;
         try {
           let top3Query = query(
             collection(db, collectionName),
@@ -135,7 +167,7 @@
           const container = document.getElementById('leaderboardPreview');
           container.innerHTML = "";
           if (results.length > 0) {
-            let html = "<table style='margin:0 auto;'>";
+            let html = "<table>";
             html += "<tr><th>Pos</th><th>Nombre</th><th>Puntos</th></tr>";
             for (let i = 0; i < results.length; i++) {
               html += `<tr>
@@ -156,360 +188,177 @@
         }
       }
 
-      /***** 2) AR y lógica del juego Notas Musicales *****/
+      /***** 3) Código AR (Capitals) *****/
       import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.138.0/build/three.module.js';
       import { ARButton } from 'https://cdn.jsdelivr.net/npm/three@0.138.0/examples/jsm/webxr/ARButton.js';
 
-      let htmlMode = false;
-
-      const notes = [
-        { note: "DO",  image: "DO.png" },
-        { note: "RE",  image: "RE.png" },
-        { note: "MI",  image: "MI.png" },
-        { note: "FA",  image: "FA.png" },
-        { note: "SOL", image: "SOL.png" },
-        { note: "LA",  image: "LA.png" },
-        { note: "SI",  image: "SI.png" },
-        { note: "DO'", image: "DO'.png" },
-        { note: "RE'", image: "RE'.png" },
-        { note: "MI'", image: "MI'.png" }
-      ];
-      const manager = new THREE.LoadingManager(() => { console.log("Texturas cargadas."); });
-      const textureLoader = new THREE.TextureLoader(manager);
-      const baseURL = "https://raw.githubusercontent.com/rafgim2/ARMusic/main/";
-      const preloadedTextures = {};
-      notes.forEach(note => {
-        preloadedTextures[note.image] = textureLoader.load(baseURL + note.image);
-      });
-      const preloadedHTMLImages = {};
-      notes.forEach(note => {
-        const img = new Image();
-        img.src = baseURL + note.image;
-        preloadedHTMLImages[note.image] = img;
-      });
-
+      // Variables globales del juego AR
       let camera, scene, renderer;
-      let correctAnswer;
-      let answers = [];
-      let hasCollided = false;
       let questionMesh = null;
-      let questionText = "";
-      let questionNoteImage = "";
-      let questionImageMesh = null;
-      let collisionThreshold = 0.2;
-      let sparksSystems = [];
+      let answers = [];
+      let correctAnswer = "";
+      let hasCollided = false;
+      let gameOver = false;
       let correctCount = 0;
       let wrongCount = 0;
-      let gameStartTime = 0;
-      const gameDuration = 60;
-      let gameOver = false;
-      let countdownMesh = null, scoreMesh = null;
-      let restartButtonMesh = null;
+      let questionText = "";
+      let selectedNumAnswers = 4;
+      const gameDuration = 60; // segundos
+      const collisionThreshold = 0.2;
+      const resolutionFactor = 4;
 
-      let originalAnswerTransforms = null;
+      // Variables para HUD y countdown
+      let countdownMesh, scoreMesh;
       let beepPlayed = false;
       let gameReady = false;
       let countdownStarted = false;
-      const resolutionFactor = 4;
-      let playerName = "";
-      let selectedNumAnswers = 4;
-      let currentQuestionStartTime = 0;
-      let correctResponseTimes = [];
-
-      // Para la tabla final en AR:
-      let leaderboardMesh = null;
-      let leaderboardResults = [];
-      let scoreboardStartIndex = 0;
-      const maxResultsToShow = 10;
-      let playerPosition = null;
+      
+      // Variables para efectos y tiempos
       let initialCameraPos = new THREE.Vector3();
       let initialCameraDir = new THREE.Vector3();
+      let sparkTexture = null;
+      const sparksSystems = [];
+      let currentQuestionStartTime = 0;
+      let correctResponseTimes = [];
+      let leaderboardResults = [];
+      let playerPosition = null;
+      // NUEVO: añadimos exitButtonMesh además del restartButtonMesh
+      let leaderboardMesh = null, restartButtonMesh = null, exitButtonMesh = null;
 
-      function drawRoundedRect(ctx, x, y, width, height, radius) {
+      let gameStartTime = 0;
+      let playerName = "";
+
+      function drawRoundedRect(ctx, x, y, w, h, r) {
         ctx.beginPath();
-        ctx.moveTo(x + radius, y);
-        ctx.lineTo(x + width - radius, y);
-        ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
-        ctx.lineTo(x + width, y + height - radius);
-        ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
-        ctx.lineTo(x + radius, y + height);
-        ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-        ctx.lineTo(x, y + radius);
-        ctx.quadraticCurveTo(x, y, x + radius, y);
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
         ctx.closePath();
         ctx.fill();
       }
 
-      function updateQuestionPanel() {
-        const text = questionText;
-        const fontSize = 48 * resolutionFactor;
-        const padding = 40 * resolutionFactor;
-        const tmpCanvas = document.createElement('canvas');
-        const tmpCtx = tmpCanvas.getContext('2d');
-        tmpCtx.font = 'Bold ' + fontSize + 'px Arial';
-        const metrics = tmpCtx.measureText(text);
-        const canvasWidth = metrics.width + padding;
-        const canvasHeight = 128 * resolutionFactor;
+      function createCanvasPlane(canvas, ctx, width, height) {
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        const geometry = new THREE.PlaneGeometry(width, height);
+        const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.userData = { canvas, ctx, texture };
+        return mesh;
+      }
 
+      function createButton(text, planeWidth = 0.3, planeHeight = 0.1) {
         const canvas = document.createElement('canvas');
-        canvas.width = canvasWidth;
-        canvas.height = canvasHeight;
+        canvas.width = 256 * resolutionFactor;
+        canvas.height = 64 * resolutionFactor;
         const ctx = canvas.getContext('2d');
-        ctx.font = 'Bold ' + fontSize + 'px Arial';
         ctx.fillStyle = "#007BFF";
-        drawRoundedRect(ctx, 0, 0, canvas.width, canvas.height, 20 * resolutionFactor);
+        drawRoundedRect(ctx, 0, 0, canvas.width, canvas.height, 10 * resolutionFactor);
         ctx.fillStyle = "#FFFFFF";
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
+        ctx.font = 'Bold ' + (18 * resolutionFactor) + 'px Arial';
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
         ctx.fillText(text, canvas.width / 2, canvas.height / 2);
-
         const texture = new THREE.CanvasTexture(canvas);
         texture.minFilter = THREE.LinearFilter;
         texture.magFilter = THREE.LinearFilter;
-        const scaleX = 0.6 / (512 * resolutionFactor);
-        const scaleY = 0.15 / (128 * resolutionFactor);
-        const newWidth  = canvas.width  * scaleX;
-        const newHeight = canvas.height * scaleY;
+        const geometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
+        const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
+        return new THREE.Mesh(geometry, material);
+      }
 
-        if (questionMesh) {
-          questionMesh.material.map = texture;
-          questionMesh.material.needsUpdate = true;
-          questionMesh.geometry.dispose();
-          questionMesh.geometry = new THREE.PlaneGeometry(newWidth, newHeight);
+      // Función para detectar toques en AR (para móviles)
+      function onTouchStartAR(event) {
+        if (!/Mobi|Android/i.test(navigator.userAgent)) return;
+        const touch = event.touches[0];
+        const x = (touch.clientX / window.innerWidth) * 2 - 1;
+        const y = -(touch.clientY / window.innerHeight) * 2 + 1;
+        const mouseVector = new THREE.Vector2(x, y);
+        const raycaster = new THREE.Raycaster();
+        raycaster.setFromCamera(mouseVector, camera);
+        let objectsToIntersect = [];
+        if (!gameOver) {
+          objectsToIntersect = answers;
         } else {
-          const geometry = new THREE.PlaneGeometry(newWidth, newHeight);
-          const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true });
-          questionMesh = new THREE.Mesh(geometry, material);
-          questionMesh.position.set(0, 0.5, -0.78);
-          scene.add(questionMesh);
+          // En estado final, consideramos reiniciar + salir
+          objectsToIntersect = [];
+          if (restartButtonMesh) objectsToIntersect.push(restartButtonMesh);
+          if (exitButtonMesh) objectsToIntersect.push(exitButtonMesh);
         }
-      }
+        const intersects = raycaster.intersectObjects(objectsToIntersect);
+        if (intersects.length > 0 && !hasCollided) {
+          const objHit = intersects[0].object;
+          hasCollided = true;
+          if (!gameOver) {
+            if (objHit.userData.answer === correctAnswer) {
+              let responseTime = performance.now() - currentQuestionStartTime;
+              correctResponseTimes.push(responseTime);
+              correctCount++;
+              playSound('successSound');
+              createSparksEffect(objHit.position);
+              if (questionMesh) questionMesh.visible = false;
+              answers.forEach(a => a.visible = false);
+              setTimeout(() => {
+                if (!gameOver) {
+                  generateQuestion();
+                  if (questionMesh) questionMesh.visible = true;
+                  answers.forEach(a => a.visible = true);
+                }
+                hasCollided = false;
+              }, 1000);
+            } else {
+              wrongCount++;
+              playSound('errorSound');
+              answers.forEach(a => a.material.color.set(0xff0000));
+              setTimeout(() => {
+                answers.forEach(a => a.material.color.set(0xffffff));
+                hasCollided = false;
+              }, 500);
+            }
+          } else {
+            // Colisión con los botones finales
+            if (objHit === restartButtonMesh) {
+              playSound('successSound');
+              createSparksEffect(objHit.position);
+              objHit.visible = false;
+              setTimeout(() => {
+                restartGame();
+                hasCollided = false;
+              }, 1000);
 
-      function updateQuestionImage() {
-        if (questionImageMesh) {
-          scene.remove(questionImageMesh);
-          questionImageMesh = null;
-        }
-        const texture = preloadedTextures[questionNoteImage];
-        if (!texture) return;
-
-        const canvas = document.createElement('canvas');
-        const canvasWidth  = 256;
-        const canvasHeight = 256;
-        canvas.width  = canvasWidth;
-        canvas.height = canvasHeight;
-        const ctx = canvas.getContext('2d');
-        const radius = 20;
-        ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-        ctx.save();
-        ctx.beginPath();
-        ctx.moveTo(radius, 0);
-        ctx.lineTo(canvasWidth - radius, 0);
-        ctx.quadraticCurveTo(canvasWidth, 0, canvasWidth, radius);
-        ctx.lineTo(canvasWidth, canvasHeight - radius);
-        ctx.quadraticCurveTo(canvasWidth, canvasHeight, canvasWidth - radius, canvasHeight);
-        ctx.lineTo(radius, canvasHeight);
-        ctx.quadraticCurveTo(0, canvasHeight, 0, canvasHeight - radius);
-        ctx.lineTo(0, radius);
-        ctx.quadraticCurveTo(0, 0, radius, 0);
-        ctx.closePath();
-        ctx.clip();
-        ctx.drawImage(texture.image, 0, 0, canvasWidth, canvasHeight);
-        ctx.restore();
-
-        const roundedTexture = new THREE.CanvasTexture(canvas);
-        const geometry = new THREE.PlaneGeometry(0.2, 0.2);
-        const material = new THREE.MeshBasicMaterial({ map: roundedTexture, transparent: true });
-        questionImageMesh = new THREE.Mesh(geometry, material);
-        questionImageMesh.position.set(0, 0.25, -0.82);
-        scene.add(questionImageMesh);
-      }
-
-      function updateAnswerPanel(mesh, value) {
-        const fontSize = 75 * resolutionFactor;
-        const padding  = 40 * resolutionFactor;
-        const tmpCanvas = document.createElement('canvas');
-        const tmpCtx    = tmpCanvas.getContext('2d');
-        tmpCtx.font = 'Bold ' + fontSize + 'px Arial';
-        const metrics = tmpCtx.measureText(value);
-        const canvasWidth  = metrics.width + padding;
-        const canvasHeight = fontSize + padding;
-
-        const canvas = document.createElement('canvas');
-        canvas.width  = canvasWidth;
-        canvas.height = canvasHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.font = 'Bold ' + fontSize + 'px Arial';
-        ctx.fillStyle = "#007BFF";
-        drawRoundedRect(ctx, 0, 0, canvas.width, canvas.height, 20 * resolutionFactor);
-        ctx.fillStyle = "#FFFFFF";
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(value, canvas.width / 2, canvas.height / 2);
-
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.minFilter = THREE.LinearFilter;
-        texture.magFilter = THREE.LinearFilter;
-        const scaleFactor = (0.15 * 2) / (256 * resolutionFactor);
-        const newWidth  = canvas.width  * scaleFactor;
-        const newHeight = canvas.height * scaleFactor;
-
-        mesh.material.map = texture;
-        mesh.material.needsUpdate = true;
-        mesh.geometry.dispose();
-        mesh.geometry = new THREE.PlaneGeometry(newWidth, newHeight);
-        mesh.userData.answer = value;
-      }
-
-      function createAnswerObjects(numAnswers, initialCreation) {
-        if (initialCreation) {
-          const radius = 0.8;
-          const centerPos = new THREE.Vector3().copy(initialCameraPos).addScaledVector(initialCameraDir, 0.0);
-          const minArc = 1.39626;
-          const maxArc = Math.PI;
-          let arcAngle = (numAnswers <= 4)
-            ? minArc
-            : (numAnswers >= 10)
-              ? maxArc
-              : minArc + ((numAnswers - 4) / (10 - 4)) * (maxArc - minArc);
-
-          const angleStart = -arcAngle / 2;
-          const angleEnd   =  arcAngle / 2;
-
-          originalAnswerTransforms = [];
-          for (let i = 0; i < numAnswers; i++) {
-            const canvas = document.createElement('canvas');
-            canvas.width  = 256 * resolutionFactor;
-            canvas.height = 256 * resolutionFactor;
-            const ctx = canvas.getContext('2d');
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = "#007BFF";
-            drawRoundedRect(ctx, 0, 0, canvas.width, canvas.height, 20 * resolutionFactor);
-            ctx.fillStyle = "#FFFFFF";
-            ctx.font = 'Bold ' + (75 * resolutionFactor) + 'px Arial';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillText("...", canvas.width / 2, canvas.height / 2);
-
-            const texture = new THREE.CanvasTexture(canvas);
-            texture.minFilter = THREE.LinearFilter;
-            texture.magFilter = THREE.LinearFilter;
-            const material = new THREE.MeshBasicMaterial({
-              map: texture,
-              side: THREE.DoubleSide,
-              transparent: true
-            });
-            const geometry = new THREE.PlaneGeometry(0.15, 0.15);
-            const mesh = new THREE.Mesh(geometry, material);
-
-            const angle = angleStart + (angleEnd - angleStart) * (i / (numAnswers - 1));
-            const xOffset = radius * Math.sin(angle);
-            const zOffset = -radius * Math.cos(angle);
-            const finalPos = new THREE.Vector3().copy(centerPos);
-            finalPos.x += xOffset;
-            finalPos.z += zOffset;
-            mesh.position.copy(finalPos);
-            mesh.lookAt(initialCameraPos);
-
-            answers.push(mesh);
-            scene.add(mesh);
-
-            originalAnswerTransforms.push({
-              position: mesh.position.clone(),
-              rotation: mesh.rotation.clone()
-            });
-          }
-        } else {
-          const numAnswersExisting = selectedNumAnswers;
-          const wrongAnswers = new Set();
-          while (wrongAnswers.size < (numAnswersExisting - 1)) {
-            const rndIndex = Math.floor(Math.random() * notes.length);
-            const candidate = notes[rndIndex].note;
-            if (candidate !== correctAnswer) wrongAnswers.add(candidate);
-          }
-          const answersArray = [correctAnswer, ...wrongAnswers];
-          answersArray.sort(() => Math.random() - 0.5);
-          for (let i = 0; i < numAnswersExisting; i++) {
-            updateAnswerPanel(answers[i], answersArray[i]);
+            } else if (objHit === exitButtonMesh) {
+              // NUEVO: Botón SALIR => recarga la página a los 2s
+              playSound('successSound');
+              createSparksEffect(objHit.position);
+              objHit.visible = false;
+              setTimeout(() => {
+                location.reload(); // recarga la página
+                hasCollided = false;
+              }, 2000);
+            }
           }
         }
       }
+      window.addEventListener('touchstart', onTouchStartAR, false);
 
-      function updateAnswerObjects() {
-        createAnswerObjects(selectedNumAnswers, false);
-      }
-
-      function createSparksEffect(position) {
-        const count = 100;
-        const positions = new Float32Array(count * 3);
-        const velocities = [];
-        for (let i = 0; i < count; i++) {
-          positions[i*3+0] = position.x;
-          positions[i*3+1] = position.y;
-          positions[i*3+2] = position.z;
-          velocities.push(new THREE.Vector3(
-            (Math.random()-0.5)*0.5,
-            (Math.random()-0.5)*0.5,
-            (Math.random()-0.5)*0.5
-          ));
+      function playSound(id) {
+        const el = document.getElementById(id);
+        if (el) {
+          const clone = el.cloneNode();
+          clone.play().catch(e => {});
         }
-        const geometry = new THREE.BufferGeometry();
-        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
-        const material = new THREE.PointsMaterial({
-          color: 0xffffff,
-          size: 0.02,
-          map: createCircleTexture(),
-          transparent: true,
-          opacity: 1.0,
-          depthWrite: false,
-          blending: THREE.AdditiveBlending,
-          alphaTest: 0.5,
-          sizeAttenuation: true
-        });
-        const points = new THREE.Points(geometry, material);
-        scene.add(points);
-        sparksSystems.push({
-          points,
-          velocities,
-          startTime: performance.now(),
-          lastUpdate: performance.now()
-        });
-      }
-
-      function createCircleTexture() {
-        const size = 128;
-        const canvas = document.createElement('canvas');
-        canvas.width  = size;
-        canvas.height = size;
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, size, size);
-        const gradient = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
-        gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-        gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, size, size);
-        return new THREE.CanvasTexture(canvas);
-      }
-
-      function generateQuestion() {
-        const randomIndex = Math.floor(Math.random() * notes.length);
-        const selectedNote = notes[randomIndex];
-        correctAnswer = selectedNote.note;
-        questionText = "¿Qué nota es esta?";
-        questionNoteImage = selectedNote.image;
-        if (!htmlMode) {
-          if (questionMesh) { scene.remove(questionMesh); questionMesh = null; }
-          updateQuestionPanel();
-          updateQuestionImage();
-          updateAnswerObjects();
-        }
-        beepPlayed = false;
-        currentQuestionStartTime = performance.now();
       }
 
       function init() {
         scene = new THREE.Scene();
-        camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.01, 20);
+        camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
         renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setPixelRatio(window.devicePixelRatio);
         renderer.setSize(window.innerWidth, window.innerHeight);
@@ -520,77 +369,52 @@
         light.position.set(0.5, 1, 0.25);
         scene.add(light);
 
-        window.addEventListener('resize', onWindowResize, false);
+        window.addEventListener('resize', onWindowResize);
 
+        // Overlay inicial
         const overlay = document.createElement('div');
         overlay.id = 'overlay';
-        overlay.innerHTML =
-          '<img src="ARMusic2.jpeg" alt="ARMusic" style="margin-bottom:20px; margin-top:0px;">' +
-          '<a href="https://www.youtube.com/@rafgim" target="_blank">© By Rafael Gimeno</a>' +
-          '<div class="respuestas-container">' +
-            '<label for="numAnswers">Respuestas:</label>' +
-            '<select id="numAnswers">' +
-              '<option value="4">4</option>' +
-              '<option value="5">5</option>' +
-              '<option value="6">6</option>' +
-              '<option value="7">7</option>' +
-              '<option value="8">8</option>' +
-              '<option value="9">9</option>' +
-              '<option value="10">10</option>' +
-            '</select>' +
-          '</div>' +
-          '<div id="leaderboardPreview"></div>' +
-          '<input type="text" id="playerName" placeholder="Ingresa tu nombre" style="padding:10px; font-size:16px; margin-bottom:20px;" maxlength="10">';
+        overlay.innerHTML = `
+          <img src="ARCapitals2.jpeg" alt="ARCapitals" style="margin-bottom:20px; margin-top:0px;">
+          <a href="https://www.youtube.com/@rafgim" target="_blank">© By Rafael Gimeno</a>
+          <div class="respuestas-container">
+            <label for="numAnswers">Respuestas:</label>
+            <select id="numAnswers">
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="6">6</option>
+              <option value="7">7</option>
+              <option value="8">8</option>
+              <option value="9">9</option>
+              <option value="10">10</option>
+            </select>
+          </div>
+          <div id="leaderboardPreview"></div>
+          <input type="text" id="playerName" placeholder="Ingresa tu nombre" style="padding:10px; font-size:16px; margin-bottom:20px;" maxlength="10">
+        `;
 
-        const arButton = ARButton.createButton(renderer, {
-          requiredFeatures: /Mobi|Android/i.test(navigator.userAgent)
-            ? ['hit-test']
-            : ['hit-test', 'hand-tracking']
+        // Botón AR (igual que antes)
+        const arButton = ARButton.createButton(renderer, { 
+          requiredFeatures: ['hit-test'],
+          optionalFeatures: ['hand-tracking']
         });
-        if (arButton.parentNode) { arButton.parentNode.removeChild(arButton); }
-       // Esperar un poco para que Three.js inyecte sus estilos
-setTimeout(() => {
-  // Elimina anchos y transform heredados
-  arButton.style.removeProperty("width");
-  arButton.style.removeProperty("left");
-  arButton.style.removeProperty("transform");
+        arButton.style.position = 'absolute';
+        arButton.style.top = '650px';
+        arButton.style.left = '100%';
+        arButton.style.transform = 'translateX(0%)';
+        arButton.style.width = '150px';
+        arButton.style.height = '50px';
+        arButton.style.fontSize = '16px';
+        arButton.style.backgroundColor = 'green';
+        arButton.style.color = 'white';
+        overlay.appendChild(arButton);
 
-  // Posicionar absolutamente a 615px de la parte superior
-  arButton.style.position = 'absolute';
-  arButton.style.top = '615px';
-
-  // Centrar horizontalmente
-  arButton.style.left = '50%';
-  // El -50% se refiere a la mitad de su propio ancho
-  arButton.style.transform = 'translateX(-50%)';
-
-  // Dejar que el ancho se ajuste al texto; 
-  // si lo prefieres fijo, pon arButton.style.width = "200px";
-  arButton.style.width = 'auto';
-  arButton.style.minWidth = '200px';
-
-  // Inline-block para ajustarse al contenido
-  arButton.style.display = 'inline-block';
-  arButton.style.whiteSpace = 'nowrap';
-
-  // Opcional: alto fijo, color, etc.
-  arButton.style.height = '50px';
-  arButton.style.fontSize = '16px';
-  arButton.style.backgroundColor = 'green';
-  arButton.style.color = 'white';
-
-  // Cambiar el texto final
-  arButton.textContent = "INICIAR VERSIÓN AR";
-}, 100);
-
-// Finalmente, agregarlo al overlay
-overlay.appendChild(arButton);
-
+        // BOTÓN ADICIONAL: Iniciar versión HTML
         const htmlButton = document.createElement('button');
         htmlButton.innerText = "Iniciar versión HTML";
-        htmlButton.style.fontSize = "16px";
-        htmlButton.style.padding = "10px 20px";
-        htmlButton.style.marginTop = "0px";
+        htmlButton.style.fontSize = '16px';
+        htmlButton.style.padding = '10px 20px';
+        htmlButton.style.marginTop = '10px';
         htmlButton.onclick = () => {
           selectedNumAnswers = parseInt(document.getElementById('numAnswers').value) || 4;
           playerName = document.getElementById('playerName').value || "Jugador";
@@ -615,11 +439,11 @@ overlay.appendChild(arButton);
         updateLeaderboardPreview(4);
 
         renderer.xr.addEventListener('sessionstart', () => {
+          selectedNumAnswers = parseInt(document.getElementById('numAnswers').value) || 4;
+          playerName = document.getElementById('playerName').value || "Jugador";
           camera.getWorldPosition(initialCameraPos);
           camera.getWorldDirection(initialCameraDir);
           initialCameraDir.normalize();
-          selectedNumAnswers = parseInt(document.getElementById('numAnswers').value) || 4;
-          playerName = document.getElementById('playerName').value || "Jugador";
           createAnswerObjects(selectedNumAnswers, true);
           overlay.remove();
           generateQuestion();
@@ -629,44 +453,380 @@ overlay.appendChild(arButton);
       }
 
       function onWindowResize() {
-        camera.aspect = window.innerWidth/window.innerHeight;
+        camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
       }
 
-      function startCountdown() {
-        gameStartTime = performance.now();
+      function createAnswerObjects(numAnswers, initialCreation) {
+        if (initialCreation) {
+          const radius = 0.8;
+          const angleStart = -Math.PI/4;
+          const angleEnd = Math.PI/4;
+          for (let i = 0; i < numAnswers; i++) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 256 * resolutionFactor;
+            canvas.height = 256 * resolutionFactor;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#007BFF";
+            drawRoundedRect(ctx, 0, 0, canvas.width, canvas.height, 20 * resolutionFactor);
+            ctx.fillStyle = "#FFFFFF";
+            ctx.font = 'Bold ' + (75 * resolutionFactor) + 'px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText("...", canvas.width / 2, canvas.height / 2);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.minFilter = THREE.LinearFilter;
+            texture.magFilter = THREE.LinearFilter;
+            const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true });
+            const geometry = new THREE.PlaneGeometry(0.15, 0.15);
+            const mesh = new THREE.Mesh(geometry, material);
+            const angle = angleStart + (angleEnd - angleStart) * (i / (numAnswers - 1));
+            mesh.position.set(
+              radius * Math.sin(angle),
+              0,
+              -radius * Math.cos(angle)
+            );
+            mesh.lookAt(initialCameraPos);
+            mesh.userData.answer = "";
+            answers.push(mesh);
+            scene.add(mesh);
+          }
+        } else {
+          const wrongSet = new Set();
+          while (wrongSet.size < (selectedNumAnswers - 1)) {
+            const rnd = Math.floor(Math.random() * countries.length);
+            const cand = countries[rnd].capital;
+            if (cand !== correctAnswer) {
+              wrongSet.add(cand);
+            }
+          }
+          const array = [correctAnswer, ...wrongSet];
+          array.sort(() => Math.random() - 0.5);
+          for (let i = 0; i < selectedNumAnswers; i++) {
+            updateAnswerPanel(answers[i], array[i]);
+          }
+          const radius = 0.8;
+          const uniformGap = 0.1;
+          let alphas = [];
+          for (let i = 0; i < selectedNumAnswers; i++) {
+            let panelWidth = answers[i].userData.panelWidth;
+            let alpha = Math.atan((panelWidth / 2) / radius);
+            alphas.push(alpha);
+          }
+          let totalSpan = alphas[0] + alphas[selectedNumAnswers - 1] + uniformGap * (selectedNumAnswers - 1);
+          for (let i = 0; i < selectedNumAnswers - 1; i++) {
+            totalSpan += alphas[i] + alphas[i + 1];
+          }
+          let theta = [];
+          theta[0] = -totalSpan / 2 + alphas[0];
+          for (let i = 0; i < selectedNumAnswers - 1; i++) {
+            theta[i + 1] = theta[i] + alphas[i] + uniformGap + alphas[i + 1];
+          }
+          for (let i = 0; i < selectedNumAnswers; i++) {
+            answers[i].position.set(
+              radius * Math.sin(theta[i]),
+              answers[i].position.y,
+              -radius * Math.cos(theta[i])
+            );
+            answers[i].lookAt(initialCameraPos);
+          }
+        }
+      }
+
+      function updateAnswerPanel(mesh, value) {
+        const tmpCanvas = document.createElement('canvas');
+        const tmpCtx = tmpCanvas.getContext('2d');
+        const fontSize = 75 * resolutionFactor;
+        tmpCtx.font = 'Bold ' + fontSize + 'px Arial';
+        const metrics = tmpCtx.measureText(value);
+        const padding = 40 * resolutionFactor;
+        const canvasWidth = metrics.width + padding;
+        const canvasHeight = fontSize + padding;
+
         const canvas = document.createElement('canvas');
-        canvas.width  = 256 * resolutionFactor;
-        canvas.height = 128 * resolutionFactor;
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
         const ctx = canvas.getContext('2d');
+        ctx.font = 'Bold ' + fontSize + 'px Arial';
+        ctx.fillStyle = "#007BFF";
+        drawRoundedRect(ctx, 0, 0, canvas.width, canvas.height, 20 * resolutionFactor);
+        ctx.fillStyle = "#FFFFFF";
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(value, canvas.width / 2, canvas.height / 2);
+
         const texture = new THREE.CanvasTexture(canvas);
         texture.minFilter = THREE.LinearFilter;
         texture.magFilter = THREE.LinearFilter;
-        const geometry = new THREE.PlaneGeometry(0.6, 0.3);
-        const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
-        countdownMesh = new THREE.Mesh(geometry, material);
-        countdownMesh.position.set(0, 0.7, -0.8);
-        countdownMesh.userData = { canvas, ctx, texture };
-        scene.add(countdownMesh);
+        const scaleFactor = 0.15 / (256 * resolutionFactor);
+        const newWidth = canvas.width * scaleFactor;
+        const newHeight = canvas.height * scaleFactor;
+
+        mesh.material.map = texture;
+        mesh.material.needsUpdate = true;
+        mesh.geometry.dispose();
+        mesh.geometry = new THREE.PlaneGeometry(newWidth, newHeight);
+        mesh.userData.panelWidth = newWidth;
+        mesh.userData.answer = value;
+      }
+
+      function updateQuestionPanel() {
+        const tmpCanvas = document.createElement('canvas');
+        const tmpCtx = tmpCanvas.getContext('2d');
+        const fontSize = 48 * resolutionFactor;
+        tmpCtx.font = 'Bold ' + fontSize + 'px Arial';
+        const metrics = tmpCtx.measureText(questionText);
+        const padding = 40 * resolutionFactor;
+        const canvasWidth = metrics.width + padding;
+        const canvasHeight = 128 * resolutionFactor;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = canvasWidth;
+        canvas.height = canvasHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.font = 'Bold ' + fontSize + 'px Arial';
+        ctx.fillStyle = "#007BFF";
+        drawRoundedRect(ctx, 0, 0, canvas.width, canvas.height, 20 * resolutionFactor);
+        ctx.fillStyle = "#FFFFFF";
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(questionText, canvas.width / 2, canvas.height / 2);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.minFilter = THREE.LinearFilter;
+        texture.magFilter = THREE.LinearFilter;
+        const scaleX = 0.6 / (512 * resolutionFactor);
+        const scaleY = 0.15 / (128 * resolutionFactor);
+        const newWidth = canvas.width * scaleX;
+        const newHeight = canvas.height * scaleY;
+
+        if (questionMesh) scene.remove(questionMesh);
+        const geometry = new THREE.PlaneGeometry(newWidth, newHeight);
+        const material = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide, transparent: true });
+        questionMesh = new THREE.Mesh(geometry, material);
+        questionMesh.position.set(0, 0.3, -0.8);
+        scene.add(questionMesh);
+      }
+
+      const countries = [
+        { country: "Afganistán", capital: "Kabul" },
+        { country: "Albania", capital: "Tirana" },
+        { country: "Argelia", capital: "Argel" },
+        { country: "Andorra", capital: "Andorra la Vieja" },
+        { country: "Angola", capital: "Luanda" },
+        { country: "Antigua y Barbuda", capital: "Saint John's" },
+        { country: "Argentina", capital: "Buenos Aires" },
+        { country: "Armenia", capital: "Ereván" },
+        { country: "Australia", capital: "Camberra" },
+        { country: "Austria", capital: "Viena" },
+        { country: "Azerbaiyán", capital: "Bakú" },
+        { country: "Bahamas", capital: "Nasáu" },
+        { country: "Baréin", capital: "Manama" },
+        { country: "Bangladés", capital: "Daca" },
+        { country: "Barbados", capital: "Bridgetown" },
+        { country: "Bielorrusia", capital: "Minsk" },
+        { country: "Bélgica", capital: "Bruselas" },
+        { country: "Belice", capital: "Belmopán" },
+        { country: "Benín", capital: "Porto Novo" },
+        { country: "Bután", capital: "Thimphu" },
+        { country: "Bolivia", capital: "Sucre" },
+        { country: "Bosnia y Herzegovina", capital: "Sarajevo" },
+        { country: "Botsuana", capital: "Gaborone" },
+        { country: "Brasil", capital: "Brasilia" },
+        { country: "Brunéi", capital: "Bandar Seri Begawan" },
+        { country: "Bulgaria", capital: "Sofía" },
+        { country: "Burkina Faso", capital: "Uagadugú" },
+        { country: "Burundi", capital: "Gitega" },
+        { country: "Cabo Verde", capital: "Praia" },
+        { country: "Camboya", capital: "Nom Pen" },
+        { country: "Camerún", capital: "Yaundé" },
+        { country: "Canadá", capital: "Ottawa" },
+        { country: "República Centroafricana", capital: "Bangui" },
+        { country: "Chad", capital: "Yamena" },
+        { country: "Chile", capital: "Santiago" },
+        { country: "China", capital: "Pekín" },
+        { country: "Colombia", capital: "Bogotá" },
+        { country: "Comoras", capital: "Moroni" },
+        { country: "Congo (Brazzaville)", capital: "Brazzaville" },
+        { country: "Congo (Kinshasa)", capital: "Kinsasa" },
+        { country: "Costa Rica", capital: "San José" },
+        { country: "Costa de Marfil", capital: "Yamusukro" },
+        { country: "Croacia", capital: "Zagreb" },
+        { country: "Cuba", capital: "La Habana" },
+        { country: "Chipre", capital: "Nicosia" },
+        { country: "República Checa", capital: "Praga" },
+        { country: "Dinamarca", capital: "Copenhague" },
+        { country: "Yibuti", capital: "Yibuti" },
+        { country: "Dominica", capital: "Roseau" },
+        { country: "República Dominicana", capital: "Santo Domingo" },
+        { country: "Ecuador", capital: "Quito" },
+        { country: "Egipto", capital: "El Cairo" },
+        { country: "El Salvador", capital: "San Salvador" },
+        { country: "Guinea Ecuatorial", capital: "Malabo" },
+        { country: "Eritrea", capital: "Asmara" },
+        { country: "Estonia", capital: "Tallin" },
+        { country: "Esuatini", capital: "Mbabane" },
+        { country: "Etiopía", capital: "Adís Abeba" },
+        { country: "Fiyi", capital: "Suva" },
+        { country: "Finlandia", capital: "Helsinki" },
+        { country: "Francia", capital: "París" },
+        { country: "Gabón", capital: "Libreville" },
+        { country: "Gambia", capital: "Banjul" },
+        { country: "Georgia", capital: "Tiflis" },
+        { country: "Alemania", capital: "Berlín" },
+        { country: "Ghana", capital: "Acra" },
+        { country: "Grecia", capital: "Atenas" },
+        { country: "Granada", capital: "Saint George's" },
+        { country: "Guatemala", capital: "Ciudad de Guatemala" },
+        { country: "Guinea", capital: "Conakri" },
+        { country: "Guinea-Bisáu", capital: "Bisáu" },
+        { country: "Guyana", capital: "Georgetown" },
+        { country: "Haití", capital: "Puerto Príncipe" },
+        { country: "Honduras", capital: "Tegucigalpa" },
+        { country: "Hungría", capital: "Budapest" },
+        { country: "Islandia", capital: "Reikiavik" },
+        { country: "India", capital: "Nueva Delhi" },
+        { country: "Indonesia", capital: "Yakarta" },
+        { country: "Irán", capital: "Teherán" },
+        { country: "Irak", capital: "Bagdad" },
+        { country: "Irlanda", capital: "Dublín" },
+        { country: "Israel", capital: "Jerusalén" },
+        { country: "Italia", capital: "Roma" },
+        { country: "Jamaica", capital: "Kingston" },
+        { country: "Japón", capital: "Tokio" },
+        { country: "Jordania", capital: "Amán" },
+        { country: "Kazajistán", capital: "Astaná" },
+        { country: "Kenia", capital: "Nairobi" },
+        { country: "Kiribati", capital: "Tarawa" },
+        { country: "Corea del Norte", capital: "Pyongyang" },
+        { country: "Corea del Sur", capital: "Seúl" },
+        { country: "Kosovo", capital: "Pristina" },
+        { country: "Kuwait", capital: "Kuwait" },
+        { country: "Kirguistán", capital: "Biskek" },
+        { country: "Laos", capital: "Vientián" },
+        { country: "Letonia", capital: "Riga" },
+        { country: "Líbano", capital: "Beirut" },
+        { country: "Lesoto", capital: "Maseru" },
+        { country: "Liberia", capital: "Monrovia" },
+        { country: "Libia", capital: "Trípoli" },
+        { country: "Liechtenstein", capital: "Vaduz" },
+        { country: "Lituania", capital: "Vilna" },
+        { country: "Luxemburgo", capital: "Luxemburgo" },
+        { country: "Madagascar", capital: "Antananarivo" },
+        { country: "Malaui", capital: "Lilongüe" },
+        { country: "Malasia", capital: "Kuala Lumpur" },
+        { country: "Maldivas", capital: "Malé" },
+        { country: "Malí", capital: "Bamako" },
+        { country: "Malta", capital: "La Valeta" },
+        { country: "Islas Marshall", capital: "Majuro" },
+        { country: "Mauritania", capital: "Nuakchot" },
+        { country: "Mauricio", capital: "Port Louis" },
+        { country: "México", capital: "Ciudad de México" },
+        { country: "Micronesia", capital: "Palikir" },
+        { country: "Moldavia", capital: "Chisináu" },
+        { country: "Mónaco", capital: "Mónaco" },
+        { country: "Mongolia", capital: "Ulán Bator" },
+        { country: "Montenegro", capital: "Podgorica" },
+        { country: "Marruecos", capital: "Rabat" },
+        { country: "Mozambique", capital: "Maputo" },
+        { country: "Birmania", capital: "Naipyidó" },
+        { country: "Namibia", capital: "Windhoek" },
+        { country: "Nauru", capital: "Yaren" },
+        { country: "Nepal", capital: "Katmandú" },
+        { country: "Países Bajos", capital: "Ámsterdam" },
+        { country: "Nueva Zelanda", capital: "Wellington" },
+        { country: "Nicaragua", capital: "Managua" },
+        { country: "Níger", capital: "Niamey" },
+        { country: "Nigeria", capital: "Abuya" },
+        { country: "Macedonia del Norte", capital: "Skopie" },
+        { country: "Noruega", capital: "Oslo" },
+        { country: "Omán", capital: "Mascate" },
+        { country: "Pakistán", capital: "Islamabad" },
+        { country: "Palaos", capital: "Ngerulmud" },
+        { country: "Panamá", capital: "Ciudad de Panamá" },
+        { country: "Papúa Nueva Guinea", capital: "Port Moresby" },
+        { country: "Paraguay", capital: "Asunción" },
+        { country: "Perú", capital: "Lima" },
+        { country: "Filipinas", capital: "Manila" },
+        { country: "Polonia", capital: "Varsovia" },
+        { country: "Portugal", capital: "Lisboa" },
+        { country: "Catar", capital: "Doha" },
+        { country: "Rumania", capital: "Bucarest" },
+        { country: "Rusia", capital: "Moscú" },
+        { country: "Ruanda", capital: "Kigali" },
+        { country: "San Cristóbal y Nieves", capital: "Basseterre" },
+        { country: "San Vicente y las Granadinas", capital: "Kingstown" },
+        { country: "Santa Lucía", capital: "Castries" },
+        { country: "Samoa", capital: "Apia" },
+        { country: "San Marino", capital: "San Marino" },
+        { country: "Santo Tomé y Príncipe", capital: "Santo Tomé" },
+        { country: "Senegal", capital: "Dakar" },
+        { country: "Serbia", capital: "Belgrado" },
+        { country: "Seychelles", capital: "Victoria" },
+        { country: "Sierra Leona", capital: "Freetown" },
+        { country: "Singapur", capital: "Singapur" },
+        { country: "Eslovaquia", capital: "Bratislava" },
+        { country: "Eslovenia", capital: "Liubliana" },
+        { country: "Islas Salomón", capital: "Honiara" },
+        { country: "Somalia", capital: "Mogadiscio" },
+        { country: "Sudáfrica", capital: "Pretoria" },
+        { country: "Sudán del Sur", capital: "Yuba" },
+        { country: "Sudán", capital: "Jartum" },
+        { country: "Sri Lanka", capital: "Sri Jayawardenapura" },
+        { country: "Palestina", capital: "Jerusalén Este" },
+        { country: "Estados Unidos", capital: "Washington, D.C." },
+        { country: "Uruguay", capital: "Montevideo" },
+        { country: "Uzbekistán", capital: "Taskent" },
+        { country: "Vanuatu", capital: "Port Vila" },
+        { country: "Ciudad del Vaticano", capital: "Ciudad del Vaticano" },
+        { country: "Venezuela", capital: "Caracas" },
+        { country: "Vietnam", capital: "Hanói" },
+        { country: "Yemen", capital: "Saná" },
+        { country: "Zambia", capital: "Lusaka" },
+        { country: "Zimbabue", capital: "Harare" }
+      ];
+      function generateQuestion() {
+        const rnd = Math.floor(Math.random() * countries.length);
+        const item = countries[rnd];
+        correctAnswer = item.capital;
+        questionText = `¿Cuál es la capital de ${item.country}?`;
+        updateQuestionPanel();
+        createAnswerObjects(selectedNumAnswers, false);
+        beepPlayed = false;
+        currentQuestionStartTime = performance.now();
       }
 
       function createScoreDisplay() {
         const canvas = document.createElement('canvas');
-        canvas.width  = 256 * resolutionFactor;
+        canvas.width = 256 * resolutionFactor;
         canvas.height = 128 * resolutionFactor;
-        const ctx = canvas.getContext('2d');
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.minFilter = THREE.LinearFilter;
-        texture.magFilter = THREE.LinearFilter;
-        const geometry = new THREE.PlaneGeometry(0.6, 0.3);
-        const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
-        scoreMesh = new THREE.Mesh(geometry, material);
+        scoreMesh = createCanvasPlane(canvas, canvas.getContext('2d'), 0.6, 0.3);
         scoreMesh.position.set(0, -0.2, -0.82);
-        scoreMesh.userData = { canvas, ctx, texture };
         scene.add(scoreMesh);
       }
-
+      function updateScoreDisplay() {
+        if (!scoreMesh) return;
+        const { canvas, ctx, texture } = scoreMesh.userData;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#FFFFFF";
+        ctx.font = 'Bold ' + (24 * resolutionFactor) + 'px Arial';
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(`Aciertos: ${correctCount} | Fallos: ${wrongCount}`, canvas.width / 2, canvas.height / 2);
+        texture.needsUpdate = true;
+      }
+      function startCountdown() {
+        gameStartTime = performance.now();
+        const canvas = document.createElement('canvas');
+        canvas.width = 256 * resolutionFactor;
+        canvas.height = 128 * resolutionFactor;
+        countdownMesh = createCanvasPlane(canvas, canvas.getContext('2d'), 0.6, 0.3);
+        countdownMesh.position.set(0, 0.50, -0.82);
+        scene.add(countdownMesh);
+      }
       function updateCountdown() {
         if (!countdownMesh) return;
         const { canvas, ctx, texture } = countdownMesh.userData;
@@ -678,74 +838,84 @@ overlay.appendChild(arButton);
         ctx.font = 'Bold ' + (64 * resolutionFactor) + 'px Arial';
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText(seconds < 10 ? "00:0" + seconds : "00:" + seconds, canvas.width/2, canvas.height/2);
+        ctx.fillText(seconds < 10 ? "00:0" + seconds : "00:" + seconds, canvas.width / 2, canvas.height / 2);
         texture.needsUpdate = true;
-        if (remaining <= 10 && !beepPlayed) {
+        if (remaining <= -10 && !beepPlayed) {
           const beepSound = document.getElementById('beepSound');
           beepSound.currentTime = 0;
-          beepSound.play().catch(e => console.error(e));
+          beepSound.play().catch(e => {});
           beepPlayed = true;
         }
         return remaining;
       }
 
-      function updateScoreDisplay() {
-        if (!scoreMesh) return;
-        const { canvas, ctx, texture } = scoreMesh.userData;
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#FFFFFF";
-        ctx.font = 'Bold ' + (24 * resolutionFactor) + 'px Arial';
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(`Aciertos: ${correctCount} | Fallos: ${wrongCount}`, canvas.width/2, canvas.height/2);
-        texture.needsUpdate = true;
+      function createSparksEffect(pos) {
+        if (!sparkTexture) {
+          const size = 128;
+          const c = document.createElement('canvas');
+          c.width = size; c.height = size;
+          const ctx = c.getContext('2d');
+          const grd = ctx.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+          grd.addColorStop(0, 'rgba(255,255,255,1)');
+          grd.addColorStop(1, 'rgba(255,255,255,0)');
+          ctx.fillStyle = grd;
+          ctx.fillRect(0, 0, size, size);
+          sparkTexture = new THREE.CanvasTexture(c);
+          sparkTexture.minFilter = THREE.LinearFilter;
+        }
+        const count = 100;
+        const positions = new Float32Array(count * 3);
+        const velocities = [];
+        for (let i = 0; i < count; i++) {
+          positions[i*3+0] = pos.x;
+          positions[i*3+1] = pos.y;
+          positions[i*3+2] = pos.z;
+          velocities.push(new THREE.Vector3(
+            (Math.random()-0.5)*0.5,
+            (Math.random()-0.5)*0.5,
+            (Math.random()-0.5)*0.5
+          ));
+        }
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        const mat = new THREE.PointsMaterial({
+          color: 0xffffff,
+          size: 0.02,
+          map: sparkTexture,
+          transparent: true,
+          opacity: 1.0,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+          alphaTest: 0.5,
+        });
+        const points = new THREE.Points(geo, mat);
+        scene.add(points);
+        sparksSystems.push({
+          points,
+          velocities,
+          startTime: performance.now(),
+          lastUpdate: performance.now()
+        });
       }
 
       function animate() {
         renderer.setAnimationLoop(render);
       }
-
       function render(timestamp, xrFrame) {
         renderer.render(scene, camera);
         answers.forEach((mesh, index) => {
-          if (originalAnswerTransforms && originalAnswerTransforms[index]) {
-            const baseY = originalAnswerTransforms[index].position.y;
-            mesh.position.y = baseY + 0.02 * Math.sin(timestamp * 0.005 + index);
+          if (mesh.userData.baseY === undefined) {
+            mesh.userData.baseY = mesh.position.y;
           }
+          mesh.position.y = mesh.userData.baseY + 0.02 * Math.sin(timestamp * 0.005 + index);
         });
-
         if (gameReady && !countdownStarted) {
           startCountdown();
           const timerSound = document.getElementById('timerSound');
           timerSound.loop = false;
-          timerSound.play().catch(e => console.error(e));
+          timerSound.play().catch(e => {});
           countdownStarted = true;
         }
-
-        const now = performance.now();
-        for (let i = sparksSystems.length - 1; i >= 0; i--) {
-          const sys = sparksSystems[i];
-          const dt = (now - sys.lastUpdate) / 1000;
-          sys.lastUpdate = now;
-          const pos = sys.points.geometry.attributes.position.array;
-          for (let j = 0; j < sys.velocities.length; j++) {
-            pos[j*3+0] += sys.velocities[j].x * dt;
-            pos[j*3+1] += sys.velocities[j].y * dt;
-            pos[j*3+2] += sys.velocities[j].z * dt;
-          }
-          sys.points.geometry.attributes.position.needsUpdate = true;
-          let life = now - sys.startTime;
-          if (life > 1700) {
-            let fadeTime = life - 1700;
-            let fadeFactor = Math.max(0, 1 - (fadeTime / 300));
-            sys.points.material.opacity = fadeFactor;
-          }
-          if (life > 2000) {
-            scene.remove(sys.points);
-            sparksSystems.splice(i,1);
-          }
-        }
-
         if (!gameOver) {
           const remaining = updateCountdown();
           updateScoreDisplay();
@@ -753,7 +923,6 @@ overlay.appendChild(arButton);
             endGame();
           }
         }
-
         const session = renderer.xr.getSession();
         let interactionPoints = [];
         if (session && xrFrame) {
@@ -774,161 +943,152 @@ overlay.appendChild(arButton);
           }
         }
         if (interactionPoints.length === 0) {
-          let cameraPos = new THREE.Vector3();
-          camera.getWorldPosition(cameraPos);
-          interactionPoints.push(cameraPos);
+          let camPos = new THREE.Vector3();
+          camera.getWorldPosition(camPos);
+          interactionPoints.push(camPos);
         }
-
         if (!gameOver) {
           for (let panel of answers) {
             const panelPos = new THREE.Vector3();
             panel.getWorldPosition(panelPos);
             for (const pt of interactionPoints) {
-              const dist = pt.distanceTo(panelPos);
+              const dist = panelPos.distanceTo(pt);
               if (dist < collisionThreshold && !hasCollided) {
                 hasCollided = true;
                 if (panel.userData.answer === correctAnswer) {
-                  const responseTime = performance.now() - currentQuestionStartTime;
+                  let responseTime = performance.now() - currentQuestionStartTime;
                   correctResponseTimes.push(responseTime);
                   correctCount++;
-                  const successSound = document.getElementById('successSound');
-                  const clone = successSound.cloneNode();
-                  clone.play().catch(e => console.error(e));
+                  playSound('successSound');
                   createSparksEffect(panel.position);
                   if (questionMesh) questionMesh.visible = false;
-                  if (questionImageMesh) questionImageMesh.visible = false;
                   answers.forEach(a => a.visible = false);
                   setTimeout(() => {
                     if (!gameOver) {
                       generateQuestion();
                       if (questionMesh) questionMesh.visible = true;
-                      if (questionImageMesh) questionImageMesh.visible = true;
                       answers.forEach(a => a.visible = true);
                     }
                     hasCollided = false;
                   }, 1000);
                 } else {
                   wrongCount++;
-                  const errorSound = document.getElementById('errorSound');
-                  const errorClone = errorSound.cloneNode();
-                  errorClone.play().catch(e => console.error(e));
+                  playSound('errorSound');
                   answers.forEach(a => a.material.color.set(0xff0000));
                   setTimeout(() => {
                     answers.forEach(a => a.material.color.set(0xffffff));
                     hasCollided = false;
                   }, 500);
                 }
-                return;
+                break;
+              }
+            }
+          }
+        } else {
+          // En estado final, detectar colisiones con el botón Reiniciar y Salir
+          if (restartButtonMesh || exitButtonMesh) {
+            let finalButtons = [];
+            if (restartButtonMesh) finalButtons.push(restartButtonMesh);
+            if (exitButtonMesh) finalButtons.push(exitButtonMesh);
+
+            for (const btn of finalButtons) {
+              if (!btn.visible) continue;
+              const btnPos = new THREE.Vector3();
+              btn.getWorldPosition(btnPos);
+              for (const pt of interactionPoints) {
+                if (btnPos.distanceTo(pt) < collisionThreshold && !hasCollided) {
+                  hasCollided = true;
+
+                  // REINICIAR
+                  if (btn === restartButtonMesh) {
+                    playSound('successSound');
+                    createSparksEffect(btn.position);
+                    btn.visible = false;
+                    setTimeout(() => {
+                      restartGame();
+                      hasCollided = false;
+                    }, 1000);
+
+                  // SALIR => recarga la página
+                  } else if (btn === exitButtonMesh) {
+                    playSound('successSound');
+                    createSparksEffect(btn.position);
+                    btn.visible = false;
+                    setTimeout(() => {
+                      location.reload();
+                      hasCollided = false;
+                    }, 2000);
+                  }
+                  return;
+                }
               }
             }
           }
         }
+        const now = performance.now();
+        for (let i = sparksSystems.length - 1; i >= 0; i--) {
+          const sys = sparksSystems[i];
+          const dt = (now - sys.lastUpdate) / 1000;
+          sys.lastUpdate = now;
+          const posArray = sys.points.geometry.attributes.position.array;
+          for (let j = 0; j < sys.velocities.length; j++) {
+            posArray[j * 3 + 0] += sys.velocities[j].x * dt;
+            posArray[j * 3 + 1] += sys.velocities[j].y * dt;
+            posArray[j * 3 + 2] += sys.velocities[j].z * dt;
+          }
+          sys.points.geometry.attributes.position.needsUpdate = true;
+          let life = now - sys.startTime;
+          if (life > 1700) {
+            let fadeTime = life - 1700;
+            let fadeFactor = Math.max(0, 1 - (fadeTime / 300));
+            sys.points.material.opacity = fadeFactor;
+          }
+          if (life > 2000) {
+            scene.remove(sys.points);
+            sparksSystems.splice(i, 1);
+          }
+        }
       }
 
-      async function endGame() {
-        gameOver = true;
-        if (questionMesh) scene.remove(questionMesh);
-        if (questionImageMesh) scene.remove(questionImageMesh);
-        if (countdownMesh) scene.remove(countdownMesh);
-        if (scoreMesh) scene.remove(scoreMesh);
-        answers.forEach(panel => scene.remove(panel));
+      function restartGame() {
+        if (leaderboardMesh) scene.remove(leaderboardMesh);
+        if (restartButtonMesh) scene.remove(restartButtonMesh);
+        if (exitButtonMesh) scene.remove(exitButtonMesh);
+        leaderboardMesh = null;
+        restartButtonMesh = null;
+        exitButtonMesh = null;
 
-        let avgTime = 0;
-        if (correctResponseTimes.length > 0) {
-          let sum = correctResponseTimes.reduce((a, b) => a + b, 0);
-          avgTime = sum / correctResponseTimes.length / 1000;
-        }
-        const rawScore = (correctCount - wrongCount) - avgTime;
-        const finalScore = parseFloat(rawScore.toFixed(3));
-        const collectionName = `Musicleaderboard_${selectedNumAnswers}`;
-
-        let docsFound = await getDocs(
-          query(
-            collection(db, collectionName),
-            where("name", "==", playerName),
-            limit(1)
-          )
-        );
-        if (!docsFound.empty) {
-          const docToUpdate = docsFound.docs[0];
-          await updateDoc(doc(db, collectionName, docToUpdate.id), {
-            score: finalScore,
-            timestamp: serverTimestamp()
-          });
-        } else {
-          await addDoc(collection(db, collectionName), {
-            name: playerName,
-            score: finalScore,
-            timestamp: serverTimestamp()
-          });
-        }
-
-        let qLeaderboard = query(
-          collection(db, collectionName),
-          orderBy("score", "desc")
-        );
-        let querySnapshot;
-        try {
-          querySnapshot = await getDocs(qLeaderboard);
-        } catch (err) {
-          console.error("Error consultando el leaderboard:", err);
-          return;
-        }
         leaderboardResults = [];
-        let idx = 0;
-        querySnapshot.forEach((docSnap) => {
-          let data = docSnap.data();
-          leaderboardResults.push({ ...data, _index: idx });
-          idx++;
-        });
-        let playerIndex = leaderboardResults.findIndex(
-          (r) => r.name === playerName && r.score === finalScore
-        );
-        playerPosition = (playerIndex >= 0) ? (playerIndex + 1) : null;
-
-        scoreboardStartIndex = playerIndex - Math.floor(maxResultsToShow / 2);
-        if (scoreboardStartIndex < 0) scoreboardStartIndex = 0;
-        if (scoreboardStartIndex >= leaderboardResults.length) {
-          scoreboardStartIndex = 0;
+        playerPosition = null;
+        if (questionMesh) {
+          scene.remove(questionMesh);
+          questionMesh = null;
         }
-        if (scoreboardStartIndex + maxResultsToShow > leaderboardResults.length) {
-          scoreboardStartIndex = Math.max(0, leaderboardResults.length - maxResultsToShow);
-        }
-        leaderboardResults = leaderboardResults.slice(scoreboardStartIndex, scoreboardStartIndex + maxResultsToShow);
-
-        createLeaderboardMesh();
-        drawLeaderboardSegment();
+        correctCount = 0;
+        wrongCount = 0;
+        gameOver = false;
+        answers.forEach(a => scene.remove(a));
+        answers = [];
+        createAnswerObjects(selectedNumAnswers, true);
+        generateQuestion();
+        countdownStarted = false;
+        gameReady = true;
+        createScoreDisplay();
+        const timerSound = document.getElementById('timerSound');
+        timerSound.currentTime = 0;
+        timerSound.loop = false;
+        timerSound.play().catch(e => {});
       }
 
-      function createButton(text, width=0.3, height=0.15) {
-        const canvas = document.createElement('canvas');
-        canvas.width  = 256 * resolutionFactor;
-        canvas.height = 128 * resolutionFactor;
-        const ctx = canvas.getContext('2d');
-        ctx.fillStyle = "#007BFF";
-        drawRoundedRect(ctx, 0, 0, canvas.width, canvas.height, 20 * resolutionFactor);
-        ctx.fillStyle = "#FFFFFF";
-        ctx.font = 'Bold ' + (48 * resolutionFactor) + 'px Arial';
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(text, canvas.width / 2, canvas.height / 2);
-
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.minFilter = THREE.LinearFilter;
-        texture.magFilter = THREE.LinearFilter;
-        const geometry = new THREE.PlaneGeometry(width, height);
-        const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
-        const mesh = new THREE.Mesh(geometry, material);
-        return mesh;
-      }
-
-      // NUEVO: añadimos exitButtonMesh
-      let exitButtonMesh = null;
-
+      // Se crea el leaderboard y también un botón "Salir" a la derecha
       function createLeaderboardMesh() {
-        if (leaderboardMesh) { scene.remove(leaderboardMesh); leaderboardMesh = null; }
-        if (restartButtonMesh) { scene.remove(restartButtonMesh); restartButtonMesh = null; }
-        if (exitButtonMesh) { scene.remove(exitButtonMesh); exitButtonMesh = null; }
+        if (leaderboardMesh) scene.remove(leaderboardMesh);
+        if (restartButtonMesh) scene.remove(restartButtonMesh);
+        if (exitButtonMesh) scene.remove(exitButtonMesh);
+
+        leaderboardMesh = null;
+        restartButtonMesh = null;
+        exitButtonMesh = null;
 
         const dummyCanvas = document.createElement('canvas');
         dummyCanvas.width = 512;
@@ -946,199 +1106,146 @@ overlay.appendChild(arButton);
         leaderboardMesh.position.set(0, 0, -1.2);
         scene.add(leaderboardMesh);
 
-        // Botón Reiniciar (izquierda)
-        restartButtonMesh = createButton("Reiniciar", 0.3, 0.15);
-        restartButtonMesh.position.set(-0.8, 0, -1.2);
+        // Botón "Reiniciar" a la izquierda
+        restartButtonMesh = createButton("Reiniciar");
+        restartButtonMesh.position.set(-planeWidth / 2 - 0.1, 0, -1.1);
         scene.add(restartButtonMesh);
 
         // NUEVO: Botón "Salir" a la derecha
-        exitButtonMesh = createButton("Salir", 0.3, 0.15);
-        exitButtonMesh.position.set(0.8, 0, -1.2);
+        exitButtonMesh = createButton("Salir");
+        exitButtonMesh.position.set(planeWidth / 2 + 0.1, 0, -1.1);
         scene.add(exitButtonMesh);
       }
 
+      // Dibujar la tabla de clasificación
       function drawLeaderboardSegment() {
         if (!leaderboardMesh) return;
         const { canvas, ctx, texture, planeWidth } = leaderboardMesh.userData;
-        const subset = leaderboardResults;
-        const lineHeight = 40 * resolutionFactor;
-        const extraLines = 4;
+        const headerHeight = 40 * resolutionFactor;
+        const rowHeight = 30 * resolutionFactor;
+        const total = leaderboardResults.length;
+        const displayCount = Math.min(10, total);
+        let playerIndex;
+        if (playerPosition !== null) {
+          playerIndex = playerPosition - 1;
+        } else {
+          playerIndex = Math.floor(displayCount / 2);
+        }
+        let startIndex = Math.max(0, playerIndex - Math.floor(displayCount / 2));
+        if (startIndex + displayCount > total) {
+          startIndex = total - displayCount;
+          if (startIndex < 0) startIndex = 0;
+        }
+        const displayResults = leaderboardResults.slice(startIndex, startIndex + displayCount);
         const canvasWidth = 512 * resolutionFactor;
-        const canvasHeight = lineHeight * (subset.length + extraLines);
+        const canvasHeight = headerHeight + rowHeight * displayCount;
         canvas.width = canvasWidth;
         canvas.height = canvasHeight;
         ctx.fillStyle = "rgba(0,0,0,0.7)";
         ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
         ctx.fillStyle = "#FFFFFF";
         ctx.font = 'Bold ' + (28 * resolutionFactor) + 'px Arial';
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.fillText("Tabla de Clasificación", canvasWidth / 2, lineHeight);
-
+        ctx.fillText(`Tabla de Clasificación`, canvasWidth / 2, headerHeight / 2);
+        // Cabecera
         const xPosPos   = 0.10 * canvasWidth;
         const xPosName  = 0.40 * canvasWidth;
         const xPosScore = 0.75 * canvasWidth;
-        let startY = lineHeight * 2.5;
+        let yPos = headerHeight;
         ctx.font = 'Bold ' + (24 * resolutionFactor) + 'px Arial';
         ctx.textAlign = "left";
-        ctx.fillText("Pos", xPosPos, startY);
-        ctx.fillText("Nombre", xPosName, startY);
-        ctx.fillText("Puntos", xPosScore, startY);
-
-        let yPos = startY + (1.5 * lineHeight);
-        for (let i = 0; i < subset.length; i++) {
-          const data = subset[i];
-          const realPos = data._index + 1;
-          if (playerPosition !== null && realPos === playerPosition) {
+        ctx.fillText("Pos", xPosPos, yPos);
+        ctx.fillText("Nombre", xPosName, yPos);
+        ctx.fillText("Puntos", xPosScore, yPos);
+        yPos += rowHeight;
+        for (let i = 0; i < displayResults.length; i++) {
+          const data = displayResults[i];
+          const globalRank = startIndex + i + 1;
+          if (playerPosition !== null && globalRank === playerPosition) {
             ctx.fillStyle = "green";
-            ctx.fillRect(0, yPos - lineHeight * 0.6, canvasWidth, lineHeight);
+            ctx.fillRect(0, yPos - rowHeight * 0.6, canvasWidth, rowHeight);
             ctx.fillStyle = "#FFFFFF";
           } else {
             ctx.fillStyle = "#FFFFFF";
           }
-          ctx.fillText(String(realPos), xPosPos, yPos);
+          ctx.fillText(String(globalRank), xPosPos, yPos);
           ctx.fillText(data.name, xPosName, yPos);
           ctx.fillText(String(data.score), xPosScore, yPos);
-          yPos += lineHeight;
+          yPos += rowHeight;
         }
         if (playerPosition !== null) {
           ctx.textAlign = "center";
-          ctx.fillText(`Tu posición: ${playerPosition}`, canvasWidth / 2, yPos + lineHeight);
+          ctx.fillText(`Tu posición: ${playerPosition}`, canvasWidth / 2, yPos + rowHeight);
         }
         texture.needsUpdate = true;
         const planeHeightNew = planeWidth * (canvasHeight / canvasWidth);
         leaderboardMesh.geometry.dispose();
         leaderboardMesh.geometry = new THREE.PlaneGeometry(planeWidth, planeHeightNew);
         leaderboardMesh.position.set(0, 0, -1.2);
-        restartButtonMesh.position.set(-0.8, 0, -1.2);
-        if (exitButtonMesh) exitButtonMesh.position.set(0.8, 0, -1.2);
       }
 
-      window.addEventListener('touchstart', function unlockAudio() {
-        const successEl = document.getElementById('successSound');
-        const errorEl = document.getElementById('errorSound');
-        [successEl, errorEl].forEach(audioEl => {
-          audioEl.play().then(() => {
-            audioEl.pause();
-            audioEl.currentTime = 0;
-          }).catch(e => console.error(e));
-        });
-      }, { once: true });
-
-      // NUEVO: al final del juego, si colisionamos con exitButtonMesh => recarga
-      window.addEventListener('touchstart', function(event) {
-        if (!/Mobi|Android/i.test(navigator.userAgent)) return;
-        const touch = event.touches[0];
-        const x = (touch.clientX / window.innerWidth) * 2 - 1;
-        const y = - (touch.clientY / window.innerHeight) * 2 + 1;
-        const mouseVector = new THREE.Vector2(x, y);
-        const raycaster = new THREE.Raycaster();
-        raycaster.setFromCamera(mouseVector, camera);
-
-        let objectsToIntersect = [];
-        if (!gameOver) {
-          objectsToIntersect = answers;
+      async function endGame() {
+        gameOver = true;
+        if (questionMesh) scene.remove(questionMesh);
+        if (countdownMesh) scene.remove(countdownMesh);
+        if (scoreMesh) scene.remove(scoreMesh);
+        answers.forEach(panel => scene.remove(panel));
+        let avgTime = 0;
+        if (correctResponseTimes.length > 0) {
+          let sumTimes = correctResponseTimes.reduce((acc, t) => acc + t, 0);
+          avgTime = sumTimes / correctResponseTimes.length / 1000;
+        }
+        const rawScore = (correctCount - wrongCount) - avgTime;
+        const finalScore = parseFloat(rawScore.toFixed(3));
+        const collectionName = `Capleaderboard_${selectedNumAnswers}`;
+        let docsFound = await getDocs(
+          query(
+            collection(db, collectionName),
+            where("name", "==", playerName),
+            limit(1)
+          )
+        );
+        if(!docsFound.empty) {
+          const docToUpdate = docsFound.docs[0];
+          await updateDoc(doc(db, collectionName, docToUpdate.id), {
+            score: finalScore,
+            timestamp: serverTimestamp()
+          });
         } else {
-          if (restartButtonMesh) objectsToIntersect.push(restartButtonMesh);
-          // NUEVO: añadir exitButtonMesh
-          if (exitButtonMesh) objectsToIntersect.push(exitButtonMesh);
+          await addDoc(collection(db, collectionName), {
+            name: playerName,
+            score: finalScore,
+            timestamp: serverTimestamp()
+          });
         }
-        const intersects = raycaster.intersectObjects(objectsToIntersect);
-        if (intersects.length > 0 && !hasCollided) {
-          const objHit = intersects[0].object;
-          hasCollided = true;
-          if (!gameOver) {
-            if (objHit.userData.answer === correctAnswer) {
-              const responseTime = performance.now() - currentQuestionStartTime;
-              correctResponseTimes.push(responseTime);
-              correctCount++;
-              const successSound = document.getElementById('successSound');
-              const successClone = successSound.cloneNode();
-              successClone.play().catch(e => console.error(e));
-              createSparksEffect(objHit.position);
-              if (questionMesh) questionMesh.visible = false;
-              if (questionImageMesh) questionImageMesh.visible = false;
-              answers.forEach(a => a.visible = false);
-              setTimeout(() => {
-                if (!gameOver) {
-                  generateQuestion();
-                  if (questionMesh) questionMesh.visible = true;
-                  if (questionImageMesh) questionImageMesh.visible = true;
-                  answers.forEach(a => a.visible = true);
-                }
-                hasCollided = false;
-              }, 1000);
-            } else {
-              wrongCount++;
-              const errorSound = document.getElementById('errorSound');
-              const errorClone = errorSound.cloneNode();
-              errorClone.play().catch(e => console.error(e));
-              answers.forEach(a => a.material.color.set(0xff0000));
-              setTimeout(() => {
-                answers.forEach(a => a.material.color.set(0xffffff));
-                hasCollided = false;
-              }, 500);
-            }
-          } else {
-            if (objHit === restartButtonMesh) {
-              const successSound = document.getElementById('successSound');
-              const successClone = successSound.cloneNode();
-              successClone.play().catch(e => console.error(e));
-              createSparksEffect(objHit.position);
-              objHit.visible = false;
-              setTimeout(() => {
-                restartGame();
-                hasCollided = false;
-              }, 1000);
-            }
-            // NUEVO: Al pulsar Salir => recarga la página
-            else if (objHit === exitButtonMesh) {
-              const successSound = document.getElementById('successSound');
-              const successClone = successSound.cloneNode();
-              successClone.play().catch(e => console.error(e));
-              createSparksEffect(objHit.position);
-              objHit.visible = false;
-              setTimeout(() => {
-                location.reload();
-                hasCollided = false;
-              }, 2000);
-            }
-          }
+        let qLeaderboard = query(
+          collection(db, collectionName),
+          orderBy("score", "desc")
+        );
+        let querySnapshot;
+        try {
+          querySnapshot = await getDocs(qLeaderboard);
+        } catch(err) {
+          console.error("Error consultando leaderboard:", err);
+          return;
         }
-      }, false);
-
-      function restartGame() {
-        if (questionMesh) { scene.remove(questionMesh); questionMesh = null; }
-        if (questionImageMesh) { scene.remove(questionImageMesh); questionImageMesh = null; }
-        if (countdownMesh) { scene.remove(countdownMesh); countdownMesh = null; }
-        if (scoreMesh) { scene.remove(scoreMesh); scoreMesh = null; }
-        if (leaderboardMesh) { scene.remove(leaderboardMesh); leaderboardMesh = null; }
-        if (restartButtonMesh) { scene.remove(restartButtonMesh); restartButtonMesh = null; }
-        if (exitButtonMesh) { scene.remove(exitButtonMesh); exitButtonMesh = null; }
-
-        answers.forEach(a => scene.remove(a));
-        answers = [];
-        correctCount = 0;
-        wrongCount = 0;
-        gameStartTime = performance.now();
-        gameOver = false;
-        correctResponseTimes = [];
-        createAnswerObjects(selectedNumAnswers, true);
-        generateQuestion();
-        countdownStarted = false;
-        gameReady = true;
-        createScoreDisplay();
-        const timerSound = document.getElementById('timerSound');
-        timerSound.currentTime = 0;
-        timerSound.loop = false;
-        timerSound.play().catch(e => console.error(e));
+        leaderboardResults = [];
+        let idx = 0;
+        querySnapshot.forEach(docSnap=>{
+          let data = docSnap.data();
+          leaderboardResults.push({ ...data, _index: idx });
+          idx++;
+        });
+        // Determinar la posición del jugador
+        let pIndex = leaderboardResults.findIndex(r => r.name === playerName && r.score === finalScore);
+        playerPosition = (pIndex >= 0) ? (pIndex + 1) : null;
+        createLeaderboardMesh();
+        drawLeaderboardSegment();
       }
 
-      /***** 3) RUTINAS PARA LA VERSIÓN HTML (sin cambios) *****/
+      /***** 4) Funciones para el modo HTML (no AR) *****/
       function initHTML() {
-        document.body.style.overflow = 'auto';
-        htmlMode = true;
         const gameContainer = document.createElement('div');
         gameContainer.id = 'gameContainer';
         document.body.appendChild(gameContainer);
@@ -1146,43 +1253,33 @@ overlay.appendChild(arButton);
         const questionDiv = document.createElement('div');
         questionDiv.id = 'question';
         questionDiv.style.fontSize = '32px';
-        questionDiv.style.marginBottom = '20px';
         gameContainer.appendChild(questionDiv);
-
-        const imageDiv = document.createElement('div');
-        imageDiv.id = 'questionImage';
-        gameContainer.appendChild(imageDiv);
 
         const answersDiv = document.createElement('div');
         answersDiv.id = 'answers';
         answersDiv.style.display = 'flex';
         answersDiv.style.flexWrap = 'wrap';
         answersDiv.style.gap = '10px';
-        answersDiv.style.marginBottom = '20px';
-        answersDiv.style.justifyContent = 'center';
         gameContainer.appendChild(answersDiv);
 
         const countdownDiv = document.createElement('div');
         countdownDiv.id = 'countdown';
         countdownDiv.style.fontSize = '24px';
-        countdownDiv.style.marginBottom = '20px';
         gameContainer.appendChild(countdownDiv);
 
         const scoreDiv = document.createElement('div');
         scoreDiv.id = 'score';
         scoreDiv.style.fontSize = '24px';
-        scoreDiv.style.marginBottom = '20px';
         gameContainer.appendChild(scoreDiv);
 
         const leaderboardDiv = document.createElement('div');
         leaderboardDiv.id = 'leaderboard';
-        leaderboardDiv.style.maxWidth = "180px";
+        leaderboardDiv.style.maxWidth = "auto";
         leaderboardDiv.style.maxHeight = "120px";
         leaderboardDiv.style.overflowY = "auto";
         leaderboardDiv.style.backgroundColor = "#fff";
         leaderboardDiv.style.color = "#000";
         leaderboardDiv.style.fontSize = "12px";
-        leaderboardDiv.style.margin = "20px auto";
         leaderboardDiv.style.border = "1px solid #000";
         leaderboardDiv.style.borderRadius = "6px";
         leaderboardDiv.style.padding = "4px";
@@ -1207,34 +1304,38 @@ overlay.appendChild(arButton);
       }
 
       function nextHTMLQuestion() {
-        generateQuestion();
+        generateHTMLQuestion();
         updateHTMLQuestion();
         createHTMLAnswerButtons();
       }
 
+      function generateHTMLQuestion() {
+        const rnd = Math.floor(Math.random() * countries.length);
+        const item = countries[rnd];
+        correctAnswer = item.capital;
+        questionText = `¿Cuál es la capital de ${item.country}?`;
+        currentQuestionStartTime = performance.now();
+      }
+
       function updateHTMLQuestion() {
-        document.getElementById('question').innerText = questionText;
-        const imageDiv = document.getElementById('questionImage');
-        imageDiv.innerHTML = '';
-        const img = preloadedHTMLImages[questionNoteImage];
-        img.style.maxWidth = "200px";
-        img.style.marginBottom = "20px";
-        imageDiv.appendChild(img);
+        const questionDiv = document.getElementById('question');
+        questionDiv.innerText = questionText;
       }
 
       function createHTMLAnswerButtons() {
         const answersDiv = document.getElementById('answers');
         answersDiv.innerHTML = '';
-        const numAnswers = selectedNumAnswers;
-        const wrongAnswers = new Set();
-        while (wrongAnswers.size < (numAnswers - 1)) {
-          const rndIndex = Math.floor(Math.random() * notes.length);
-          const candidate = notes[rndIndex].note;
-          if (candidate !== correctAnswer) wrongAnswers.add(candidate);
+        const wrongSet = new Set();
+        while(wrongSet.size < (selectedNumAnswers - 1)) {
+          const rnd = Math.floor(Math.random() * countries.length);
+          const cand = countries[rnd].capital;
+          if(cand !== correctAnswer) {
+            wrongSet.add(cand);
+          }
         }
-        const answersArray = [correctAnswer, ...wrongAnswers];
-        answersArray.sort(() => Math.random() - 0.5);
-        answersArray.forEach(ans => {
+        const array = [correctAnswer, ...wrongSet];
+        array.sort(() => Math.random() - 0.5);
+        array.forEach(ans => {
           const btn = document.createElement('button');
           btn.innerText = ans;
           btn.style.fontSize = '24px';
@@ -1245,16 +1346,16 @@ overlay.appendChild(arButton);
       }
 
       function handleHTMLAnswer(selected, btn) {
-        if (gameOver) return;
-        if (selected === correctAnswer) {
+        if(gameOver) return;
+        if(selected === correctAnswer) {
           btn.style.backgroundColor = "lightgreen";
-          const responseTime = performance.now() - currentQuestionStartTime;
+          let responseTime = performance.now() - currentQuestionStartTime;
           correctResponseTimes.push(responseTime);
           correctCount++;
           updateHTMLScore();
           const successSound = document.getElementById('successSound');
           const clone = successSound.cloneNode();
-          clone.play().catch(e => console.error(e));
+          clone.play().catch(e => {});
           setTimeout(() => {
             btn.style.backgroundColor = "";
             nextHTMLQuestion();
@@ -1264,8 +1365,8 @@ overlay.appendChild(arButton);
           wrongCount++;
           updateHTMLScore();
           const errorSound = document.getElementById('errorSound');
-          const errClone = errorSound.cloneNode();
-          errClone.play().catch(e => console.error(e));
+          const clone = errorSound.cloneNode();
+          clone.play().catch(e => {});
           setTimeout(() => {
             btn.style.backgroundColor = "";
           }, 500);
@@ -1273,13 +1374,13 @@ overlay.appendChild(arButton);
       }
 
       function startHTMLCountdown() {
-        if (window.countdownInterval) clearInterval(window.countdownInterval);
-        window.countdownInterval = setInterval(()=>{
+        if(htmlCountdownInterval) clearInterval(htmlCountdownInterval);
+        htmlCountdownInterval = setInterval(()=>{
           const elapsed = (performance.now() - gameStartTime)/1000;
           const remaining = Math.max(0, gameDuration - elapsed);
           document.getElementById('countdown').innerText = `Tiempo: ${Math.floor(remaining)}`;
-          if (remaining <= 0) {
-            clearInterval(window.countdownInterval);
+          if(remaining <= 0) {
+            clearInterval(htmlCountdownInterval);
             endHTMLGame();
           }
         }, 1000);
@@ -1292,14 +1393,13 @@ overlay.appendChild(arButton);
       async function endHTMLGame() {
         gameOver = true;
         let avgTime = 0;
-        if (correctResponseTimes.length > 0) {
-          let sum = correctResponseTimes.reduce((a, b) => a + b, 0);
+        if(correctResponseTimes.length > 0) {
+          let sum = correctResponseTimes.reduce((acc, t) => acc + t, 0);
           avgTime = sum / correctResponseTimes.length / 1000;
         }
         const rawScore = (correctCount - wrongCount) - avgTime;
         const finalScore = parseFloat(rawScore.toFixed(3));
-        const collectionName = `Musicleaderboard_${selectedNumAnswers}`;
-
+        const collectionName = `Capleaderboard_${selectedNumAnswers}`;
         let docsFound = await getDocs(
           query(
             collection(db, collectionName),
@@ -1307,7 +1407,7 @@ overlay.appendChild(arButton);
             limit(1)
           )
         );
-        if (!docsFound.empty) {
+        if(!docsFound.empty) {
           const docToUpdate = docsFound.docs[0];
           await updateDoc(doc(db, collectionName, docToUpdate.id), {
             score: finalScore,
@@ -1320,7 +1420,6 @@ overlay.appendChild(arButton);
             timestamp: serverTimestamp()
           });
         }
-
         let qLeaderboard = query(
           collection(db, collectionName),
           orderBy("score", "desc")
@@ -1329,22 +1428,17 @@ overlay.appendChild(arButton);
         try {
           querySnapshot = await getDocs(qLeaderboard);
         } catch(err) {
-          console.error("Error consultando el leaderboard:", err);
+          console.error("Error consultando leaderboard:", err);
           return;
         }
-        const leaderboardResultsHTML = [];
+        let results = [];
         let idx = 0;
         querySnapshot.forEach(docSnap=>{
           let data = docSnap.data();
-          leaderboardResultsHTML.push({ ...data, _index: idx });
+          results.push({ ...data, _index: idx });
           idx++;
         });
-
-        let playerIndex = leaderboardResultsHTML.findIndex(r=> r.name===playerName && r.score===finalScore);
-        let playerPosition = (playerIndex>=0)? (playerIndex+1) : null;
-
-        displayHTMLLeaderboard(leaderboardResultsHTML, playerPosition, finalScore);
-
+        displayHTMLLeaderboard(results, finalScore);
         const gameContainer = document.getElementById('gameContainer');
         const restartBtn = document.createElement('button');
         restartBtn.innerText = "Reiniciar";
@@ -1360,95 +1454,83 @@ overlay.appendChild(arButton);
         gameContainer.appendChild(restartBtn);
       }
 
-      function displayHTMLLeaderboard(leaderboardResults, playerPosition, finalScore) {
+      function displayHTMLLeaderboard(leaderboardResults, finalScore) {
         const leaderboardDiv = document.getElementById('leaderboard');
         leaderboardDiv.innerHTML = '';
         const table = document.createElement('table');
-        table.style.width = '100%';
-        table.style.borderCollapse = 'collapse';
-        table.style.margin = '0 auto';
-
+        table.style.width = '100px';
         const headerRow = document.createElement('tr');
-        ['Pos', 'Nombre', 'Puntos'].forEach(headerText=>{
+        ['Pos', 'Nombre', 'Puntos'].forEach(header => {
           const th = document.createElement('th');
-          th.innerText = headerText;
-          th.style.border = '1px solid #666';
-          th.style.padding = '4px';
-          th.style.textAlign = 'center';
+          th.innerText = header;
           headerRow.appendChild(th);
         });
         table.appendChild(headerRow);
-
-        leaderboardResults.forEach((data,index)=>{
+        leaderboardResults.forEach((data, index) => {
           const row = document.createElement('tr');
-          if (playerPosition !== null && (index+1)===playerPosition) {
+          if (data.name === playerName && data.score === finalScore) {
             row.style.backgroundColor = 'green';
             row.style.color = '#fff';
           }
           const posCell = document.createElement('td');
-          posCell.innerText = index+1;
-          posCell.style.border = '1px solid #666';
-          posCell.style.padding = '4px';
-          posCell.style.textAlign = 'center';
-          row.appendChild(posCell);
-
+          posCell.innerText = index + 1;
           const nameCell = document.createElement('td');
           nameCell.innerText = data.name;
-          nameCell.style.border = '1px solid #666';
-          nameCell.style.padding = '4px';
-          nameCell.style.textAlign = 'center';
-          row.appendChild(nameCell);
-
           const scoreCell = document.createElement('td');
           scoreCell.innerText = data.score;
-          scoreCell.style.border = '1px solid #666';
-          scoreCell.style.padding = '4px';
-          scoreCell.style.textAlign = 'center';
+          row.appendChild(posCell);
+          row.appendChild(nameCell);
           row.appendChild(scoreCell);
-
           table.appendChild(row);
         });
         leaderboardDiv.appendChild(table);
       }
 
-      /***** 4) INICIALIZACIÓN: detectar AR y elegir modo *****/
+      /***** 5) Inicio: Comprobación de soporte AR y elección de modo *****/
       window.addEventListener('DOMContentLoaded', async () => {
         let arSupported = false;
-        if (navigator.xr) {
+        if(navigator.xr) {
           try {
             arSupported = await navigator.xr.isSessionSupported('immersive-ar');
           } catch(e) {
             arSupported = false;
           }
         }
-        if (arSupported) {
+        if(arSupported) {
           init();
           animate();
         } else {
           const overlay = document.createElement('div');
           overlay.id = 'overlay';
-          overlay.innerHTML =
-            '<img src="ARMusic2.jpeg" alt="ARMusic" style="margin-bottom:10px; margin-top:0px;">' +
-            '<a href="https://www.youtube.com/@rafgim" target="_blank">© By Rafael Gimeno</a>' +
-            '<div class="respuestas-container">' +
-              '<label for="numAnswers">Respuestas:</label>' +
-              '<select id="numAnswers">' +
-                '<option value="4">4</option>' +
-                '<option value="5">5</option>' +
-                '<option value="6">6</option>' +
-                '<option value="7">7</option>' +
-                '<option value="8">8</option>' +
-                '<option value="9">9</option>' +
-                '<option value="10">10</option>' +
-              '</select>' +
-            '</div>' +
-            '<div id="leaderboardPreview"></div>' +
-            '<input type="text" id="playerName" placeholder="Ingresa tu nombre" style="padding:10px; font-size:16px; margin-bottom:20px;" maxlength="10">';
+          overlay.innerHTML = `
+            <img src="ARCapitals2.jpeg" alt="ARCapitals" style="margin-bottom:20px; margin-top:10px;">
+            <a href="https://www.youtube.com/@rafgim" target="_blank">© By Rafael Gimeno</a>
+            <div class="respuestas-container">
+              <label for="numAnswers">Respuestas:</label>
+              <select id="numAnswers">
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+              </select>
+            </div>
+            <div id="leaderboardPreview"></div>
+            <input type="text" id="playerName" placeholder="Ingresa tu nombre" style="padding:10px; font-size:16px; margin-bottom:20px;" maxlength="10">
+          `;
+          document.body.appendChild(overlay);
+          document.getElementById('numAnswers').addEventListener('change', () => {
+            const num = parseInt(document.getElementById('numAnswers').value) || 4;
+            updateLeaderboardPreview(num);
+          });
+          updateLeaderboardPreview(4);
           const startBtn = document.createElement('button');
           startBtn.innerText = "AR no compatible, Iniciar Juego HTML";
-          startBtn.style.fontSize = '16px';
-          startBtn.style.padding = '10px 20px';
-          startBtn.style.marginTop = '20px';
+          startBtn.style.fontSize = "16px";
+          startBtn.style.padding = "10px 20px";
+          startBtn.style.marginTop = "20px";
           startBtn.onclick = () => {
             selectedNumAnswers = parseInt(document.getElementById('numAnswers').value) || 4;
             playerName = document.getElementById('playerName').value || "Jugador";
@@ -1456,9 +1538,16 @@ overlay.appendChild(arButton);
             initHTML();
           };
           overlay.appendChild(startBtn);
-          document.body.appendChild(overlay);
-          updateLeaderboardPreview(4);
         }
+        window.addEventListener('touchstart', function unlockAudio() {
+          const audios = [document.getElementById('successSound'), document.getElementById('errorSound')];
+          audios.forEach(audioEl => {
+            audioEl.play().then(() => {
+              audioEl.pause();
+              audioEl.currentTime = 0;
+            }).catch(e => {});
+          });
+        }, { once: true });
       });
     </script>
   </body>
