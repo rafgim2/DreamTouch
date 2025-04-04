@@ -398,23 +398,50 @@
           requiredFeatures: ['hit-test'],
           optionalFeatures: ['hand-tracking']
         });
-        arButton.style.position = 'absolute';
-        arButton.style.top = '650px';
-        arButton.style.left = '100%';
-        arButton.style.transform = 'translateX(0%)';
-        arButton.style.width = '150px';
-        arButton.style.height = '50px';
-        arButton.style.fontSize = '16px';
-        arButton.style.backgroundColor = 'green';
-        arButton.style.color = 'white';
-        overlay.appendChild(arButton);
+        // Esperar un poco para que Three.js inyecte sus estilos
+setTimeout(() => {
+  // Elimina anchos y transform heredados
+  arButton.style.removeProperty("width");
+  arButton.style.removeProperty("left");
+  arButton.style.removeProperty("transform");
+
+  // Posicionar absolutamente a 615px de la parte superior
+  arButton.style.position = 'absolute';
+  arButton.style.top = '615px';
+
+  // Centrar horizontalmente
+  arButton.style.left = '50%';
+  // El -50% se refiere a la mitad de su propio ancho
+  arButton.style.transform = 'translateX(-50%)';
+
+  // Dejar que el ancho se ajuste al texto; 
+  // si lo prefieres fijo, pon arButton.style.width = "200px";
+  arButton.style.width = 'auto';
+  arButton.style.minWidth = '200px';
+
+  // Inline-block para ajustarse al contenido
+  arButton.style.display = 'inline-block';
+  arButton.style.whiteSpace = 'nowrap';
+
+  // Opcional: alto fijo, color, etc.
+  arButton.style.height = '50px';
+  arButton.style.fontSize = '16px';
+  arButton.style.backgroundColor = 'green';
+  arButton.style.color = 'white';
+
+  // Cambiar el texto final
+  arButton.textContent = "INICIAR VERSIÓN AR";
+}, 100);
+
+// Finalmente, agregarlo al overlay
+overlay.appendChild(arButton);
 
         // BOTÓN ADICIONAL: Iniciar versión HTML
         const htmlButton = document.createElement('button');
         htmlButton.innerText = "Iniciar versión HTML";
         htmlButton.style.fontSize = '16px';
         htmlButton.style.padding = '10px 20px';
-        htmlButton.style.marginTop = '10px';
+        htmlButton.style.marginTop = '0px';
         htmlButton.onclick = () => {
           selectedNumAnswers = parseInt(document.getElementById('numAnswers').value) || 4;
           playerName = document.getElementById('playerName').value || "Jugador";
@@ -1503,7 +1530,7 @@
           const overlay = document.createElement('div');
           overlay.id = 'overlay';
           overlay.innerHTML = `
-            <img src="ARCapitals2.jpeg" alt="ARCapitals" style="margin-bottom:20px; margin-top:10px;">
+            <img src="ARCapitals2.jpeg" alt="ARCapitals" style="margin-bottom:20px; margin-top:0px;">
             <a href="https://www.youtube.com/@rafgim" target="_blank">© By Rafael Gimeno</a>
             <div class="respuestas-container">
               <label for="numAnswers">Respuestas:</label>
