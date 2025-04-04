@@ -525,7 +525,7 @@
         const overlay = document.createElement('div');
         overlay.id = 'overlay';
         overlay.innerHTML =
-          '<img src="ARMusic2.jpeg" alt="ARMusic" style="margin-bottom:30px; margin-top:0px;">' +
+          '<img src="ARMusic2.jpeg" alt="ARMusic" style="margin-bottom:10px; margin-top:0px;">' +
           '<a href="https://www.youtube.com/@rafgim" target="_blank">© By Rafael Gimeno</a>' +
           '<div class="respuestas-container">' +
             '<label for="numAnswers">Respuestas:</label>' +
@@ -590,7 +590,7 @@ overlay.appendChild(arButton);
         htmlButton.innerText = "Iniciar versión HTML";
         htmlButton.style.fontSize = "16px";
         htmlButton.style.padding = "10px 20px";
-        htmlButton.style.marginTop = "10px";
+        htmlButton.style.marginTop = "0px";
         htmlButton.onclick = () => {
           selectedNumAnswers = parseInt(document.getElementById('numAnswers').value) || 4;
           playerName = document.getElementById('playerName').value || "Jugador";
