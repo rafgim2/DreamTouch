@@ -22,7 +22,7 @@
       margin: 0;
       transition: background-color 0.3s ease;
     }
-    /* Contenedor principal centrado con borde (ahora sin especificar color en el borde, puedes ajustarlo) */
+    /* Contenedor principal centrado con borde amarillo y disposición en columna */
     #container {
       display: flex;
       flex-direction: column;
@@ -174,8 +174,8 @@
     var audioContext = new (window.AudioContext || window.webkitAudioContext)();
     var pianoInstrument = null;
     if (window.Soundfont && typeof window.Soundfont.instrument === 'function') {
-      // Aquí usamos la URL "raw" de GitHub para cargar tu archivo SF2
-      window.Soundfont.instrument(audioContext, 'https://raw.githubusercontent.com/rafgim2/PRUEBAS/main/GeneralUser%20GS%20XG%20v1.471.sf2')
+      // Usamos la URL raw y especificamos el formato sf2
+      window.Soundfont.instrument(audioContext, 'https://raw.githubusercontent.com/rafgim2/PRUEBAS/main/GeneralUser%20GS%20XG%20v1.471.sf2', { format: 'sf2' })
         .then(function(piano) {
           pianoInstrument = piano;
           console.log("Instrumento SF2 cargado.");
