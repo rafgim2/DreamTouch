@@ -39,7 +39,7 @@
       margin-top: 5px;
       font-size: 0.9em;
     }
-    /* Cuadro grande para "Touch me!" (ahora de doble altura: 400px) */
+    /* Cuadro grande para "Touch me!" (doble altura: 400px) */
     #touchBox {
       margin: 20px auto;
       width: 80%;
@@ -118,12 +118,12 @@
           <option value="Beethoven Claro de luna.mid">Beethoven - Claro de luna.mid</option>
           <option value="Beethoven Para Elisa.mid">Beethoven - Para Elisa.mid</option>
           <option value="Beethoven Patética.mid">Beethoven - Patética.mid</option>
-          <option value="Clementi Sonatina.mid">Clementi - Sonatina.mid</option>          
+          <option value="Clementi Sonatina.mid">Clementi - Sonatina.mid</option>
           <option value="Mozart Sonata KV 545 2nd Mov.mid">Mozart - Sonata KV 545 2nd Mov.mid</option>
           <option value="Gustavo Pascual Paquito el chocolatero.mid">Gustavo Pascual - Paquito el chocolatero.mid</option>
           <option value="Handel & Halvorsen Passacaglia.mid">Handel & Halvorsen - Passacaglia.mid</option>
           <option value="R.Korsakov El vuelo del moscardón.mid">R.Korsakov - El vuelo del moscardón.mid</option>
-          <option value="Rachmaninoff Concert nº2 Tercer mov.mid">Rachmaninoff - Concert nº2 Tercer mov.mid</option>          
+          <option value="Rachmaninoff Concert nº2 Tercer mov.mid">Rachmaninoff - Concert nº2 Tercer mov.mid</option>
           <option value="Satie Gymnopedie n1.mid">Satie - Gymnopedie n1.mid</option>
         </select>
       </div>
@@ -246,6 +246,7 @@
     document.getElementById('sampleSongs').addEventListener('change', function() {
       if (this.value) {
         const fileName = this.value;
+        // Se utiliza la URL correspondiente (ajusta según tu repositorio si es necesario)
         const url = "https://raw.githubusercontent.com/rafgim2/DreamTouch/main/" + encodeURIComponent(fileName);
         loadMidiFromUrl(url, fileName);
       }
@@ -253,16 +254,11 @@
     
     // --- EVENTO PARA EL CUADRO "Touch me!" ---
     function handleTouch(e) {
-      // Obtener la posición vertical relativa al touchBox
+      // Obtener la posición vertical relativa dentro del touchBox
       var rect = e.currentTarget.getBoundingClientRect();
-      var y;
-      if (e.touches && e.touches.length > 0) {
-        y = e.touches[0].clientY;
-      } else {
-        y = e.clientY;
-      }
+      var y = (e.touches && e.touches.length > 0) ? e.touches[0].clientY : e.clientY;
       var relativeY = (y - rect.top) / rect.height;
-      // Factor: tope = 1.0 (más fuerte) y fondo = 0.0 (más bajo)
+      // Más fuerte en la parte superior (volumeFactor = 1.0) y más suave en la inferior (volumeFactor = 0.0)
       var volumeFactor = 1 - relativeY;
       
       // Cambiar el fondo a un color aleatorio
@@ -270,21 +266,21 @@
       document.body.style.backgroundColor = randomColor;
       
       if (notesToPlay.length > 0 && currentNoteIndex < notesToPlay.length) {
-        // Agrupar notas que tengan tiempos casi iguales
+        // Agrupar notas con tiempos casi iguales
         var groupThreshold = 0.001;
         var groupEnd = currentNoteIndex + 1;
         while (groupEnd < notesToPlay.length &&
                Math.abs(notesToPlay[groupEnd].time - notesToPlay[currentNoteIndex].time) < groupThreshold) {
           groupEnd++;
         }
-        // Reproducir todas las notas agrupadas con el volumen ajustado
+        // Reproducir todas las notas agrupadas, ajustando el volumen según la posición
         for (var i = currentNoteIndex; i < groupEnd; i++) {
           var note = notesToPlay[i];
           playPianoNote((note.velocity / 127) * volumeFactor, note.noteNumber);
         }
         currentNoteIndex = groupEnd;
         if (currentNoteIndex >= notesToPlay.length) {
-          currentNoteIndex = 0; // Reinicia para permitir la reproducción continua
+          currentNoteIndex = 0; // Reinicia para permitir reproducción continua
         }
       } else {
         // Si no hay MIDI cargado, reproducir la nota por defecto con el volumen ajustado
@@ -292,13 +288,13 @@
       }
     }
     
-    // Agregar un único evento según el tipo de dispositivo, pasando el objeto evento
+    // Agregar un único evento según el tipo de dispositivo, pasando el objeto del evento
     var touchBox = document.getElementById('touchBox');
     if (window.PointerEvent) {
       touchBox.addEventListener('pointerdown', handleTouch);
     } else if ('ontouchstart' in window) {
       touchBox.addEventListener('touchstart', function(e) {
-        e.preventDefault(); // Evita que se dispare el clic posteriormente
+        e.preventDefault(); // Evita disparar el clic posteriormente
         handleTouch(e);
       });
     } else {
