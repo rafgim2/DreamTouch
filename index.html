@@ -27,7 +27,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      border: 6px solid #000000;
+      border: 6px solid yellow;
       padding: 30px;
       background-color: #FFFFFF;
       color: black;
@@ -174,9 +174,12 @@
     var audioContext = new (window.AudioContext || window.webkitAudioContext)();
     var pianoInstrument = null;
     if (window.Soundfont && typeof window.Soundfont.instrument === 'function') {
-      // Usamos la URL raw y especificamos el formato sf2
-      window.Soundfont.instrument(audioContext, 'https://raw.githubusercontent.com/rafgim2/PRUEBAS/main/GeneralUser%20GS%20XG%20v1.471.sf2', { format: 'sf2' })
-        .then(function(piano) {
+      // Usamos la URL raw de GitHub y especificamos el formato 'sf2'
+      window.Soundfont.instrument(
+        audioContext,
+        'https://raw.githubusercontent.com/rafgim2/PRUEBAS/main/GeneralUser%20GS%20XG%20v1.471.sf2',
+        { format: 'sf2' }
+      ).then(function(piano) {
           pianoInstrument = piano;
           console.log("Instrumento SF2 cargado.");
         })
