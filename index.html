@@ -246,8 +246,8 @@
     document.getElementById('sampleSongs').addEventListener('change', function() {
       if (this.value) {
         const fileName = this.value;
-        // Se utiliza la URL correspondiente (ajusta según tu repositorio si es necesario)
-        const url = "https://raw.githubusercontent.com/rafgim2/DreamTouch/main/" + encodeURIComponent(fileName);
+        // Se utiliza la URL del repositorio original
+        const url = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/" + encodeURIComponent(fileName);
         loadMidiFromUrl(url, fileName);
       }
     });
