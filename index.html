@@ -22,13 +22,13 @@
       margin: 0;
       transition: background-color 0.3s ease;
     }
-    /* Contenedor central */
+    /* Contenedor central con texto en negro */
     #container {
       text-align: center;
       border: 6px solid blue;
       padding: 30px;
       background-color: #ADD8E6;
-      color: white;
+      color: black;
       width: 350px;
       box-sizing: border-box;
     }
@@ -51,7 +51,7 @@
       font-weight: bold;
       user-select: none;
       cursor: pointer;
-      position: relative; /* Para posicionar el indicador de dinámica */
+      position: relative; /* Para posicionar la regla fija */
       display: flex;
       justify-content: center;
       align-items: center;
@@ -60,19 +60,20 @@
     #touchText {
       pointer-events: none; /* Para que el toque lo detecte siempre el contenedor */
     }
-    /* Indicador de dinámica (pp, p, mp, mf, f, ff) */
+    /* Regla fija de dinámica, mostrada en el lateral del cuadro */
     #dynamicMarking {
       position: absolute;
-      bottom: 10px;
       right: 10px;
-      font-size: 1.5em;
-      color: white;
+      top: 10px;
+      font-size: 1em;
+      line-height: 1.2;
+      text-align: right;
       pointer-events: none;
     }
-    /* Botón de cargar, ahora con fondo azul claro */
+    /* Botón de cargar: fondo azul claro, texto negro */
     #loadButton {
       background-color: #ADD8E6;
-      color: white;
+      color: black;
       padding: 10px 20px;
       font-size: 1em;
       border: none;
@@ -87,7 +88,7 @@
     #fileName {
       margin-top: 0px;
       font-style: italic;
-      color: white;
+      color: black;
     }
     /* Selector de canciones de muestra */
     #sampleSongsContainer {
@@ -115,10 +116,17 @@
     <div id="copyright">
       <a href="https://www.youtube.com/@rafgim" target="_blank" style="color: inherit; text-decoration: none;">© By Rafael Gimeno</a>
     </div>
-    <!-- Cuadro de Touch, con texto y un indicador de dinámica -->
+    <!-- Cuadro de Touch con texto y regla fija -->
     <div id="touchBox">
       <span id="touchText">Touch me!</span>
-      <div id="dynamicMarking">mp</div>
+      <div id="dynamicMarking">
+        ff<br>
+        f<br>
+        mf<br>
+        mp<br>
+        p<br>
+        pp
+      </div>
     </div>
     <div id="buttons">
       <label for="midiFile" id="loadButton">
@@ -283,24 +291,8 @@
       // Calcular el factor de volumen: más fuerte en la parte superior
       var volumeFactor = 1 - relativeY;
       
-      // Asignar dinámicamente la indicación de dinámica
-      var marking;
-      if (volumeFactor >= 0.9) marking = "ff";
-      else if (volumeFactor >= 0.7) marking = "f";
-      else if (volumeFactor >= 0.5) marking = "mf";
-      else if (volumeFactor >= 0.3) marking = "mp";
-      else if (volumeFactor >= 0.1) marking = "p";
-      else marking = "pp";
-      document.getElementById('dynamicMarking').textContent = marking;
-      
-      // Cambiar el fondo del body y del touchBox a colores aleatorios (asegurando que sean distintos)
-      var bodyColor = getRandomColor();
-      var boxColor = getRandomColor();
-      while (boxColor === bodyColor) {
-        boxColor = getRandomColor();
-      }
-      document.body.style.backgroundColor = bodyColor;
-      document.getElementById('touchBox').style.backgroundColor = boxColor;
+      // Cambiar únicamente el fondo del body a un color aleatorio
+      document.body.style.backgroundColor = getRandomColor();
       
       // Reproducir notas: si hay MIDI cargado, reproducir el grupo de notas correspondientes
       if (notesToPlay.length > 0 && currentNoteIndex < notesToPlay.length) {
@@ -324,7 +316,7 @@
       }
     }
     
-    // Agregar un único evento según el tipo de dispositivo
+    // Agregar un único evento según el tipo de dispositivo, pasando el objeto del evento
     var touchBox = document.getElementById('touchBox');
     if (window.PointerEvent) {
       touchBox.addEventListener('pointerdown', handleTouch);
