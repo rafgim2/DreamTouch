@@ -257,33 +257,43 @@
       var randomColor = '#' + Math.floor(Math.random() * 16777215).toString(16);
       document.body.style.backgroundColor = randomColor;
       
-      // Reproducir nota: si hay un MIDI cargado se utiliza la siguiente nota; sino se reproduce la nota por defecto
       if (notesToPlay.length > 0 && currentNoteIndex < notesToPlay.length) {
-        var note = notesToPlay[currentNoteIndex];
-        playPianoNote(note.velocity / 127, note.noteNumber);
-        currentNoteIndex++;
+        // Agrupar notas que tengan tiempos casi iguales
+        var groupThreshold = 0.001;
+        var groupEnd = currentNoteIndex + 1;
+        while (groupEnd < notesToPlay.length &&
+               Math.abs(notesToPlay[groupEnd].time - notesToPlay[currentNoteIndex].time) < groupThreshold) {
+          groupEnd++;
+        }
+        // Reproducir todas las notas agrupadas
+        for (var i = currentNoteIndex; i < groupEnd; i++) {
+          var note = notesToPlay[i];
+          playPianoNote(note.velocity / 127, note.noteNumber);
+        }
+        currentNoteIndex = groupEnd;
         if (currentNoteIndex >= notesToPlay.length) {
-          currentNoteIndex = 0;
+          currentNoteIndex = 0; // Reinicia para permitir la reproducción continua
         }
       } else {
+        // Si no hay MIDI cargado, reproducir la nota por defecto
         playPianoNote(0.35, defaultMidiNote);
       }
     }
     
-    // Agregar evento único según el tipo de dispositivo
+    // Agregar un único evento según el tipo de dispositivo
     var touchBox = document.getElementById('touchBox');
     if (window.PointerEvent) {
       touchBox.addEventListener('pointerdown', handleTouch);
     } else if ('ontouchstart' in window) {
       touchBox.addEventListener('touchstart', function(e) {
-        e.preventDefault(); // Evita el disparo del click posterior
+        e.preventDefault(); // Evita que se dispare el clic posteriormente
         handleTouch();
       });
     } else {
       touchBox.addEventListener('click', handleTouch);
     }
     
-    // Reanudar AudioContext tras interacción del usuario
+    // Reanudar AudioContext tras la interacción del usuario
     document.addEventListener('click', function() {
       if (audioContext.state === 'suspended') {
         audioContext.resume().then(() => {
