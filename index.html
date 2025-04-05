@@ -22,7 +22,7 @@
       margin: 0;
       transition: background-color 0.3s ease;
     }
-    /* Contenedor central con borde y texto en negro */
+    /* Contenedor central con borde verde claro y texto en negro */
     #container {
       text-align: center;
       border: 6px solid #90EE90;
@@ -56,32 +56,36 @@
       justify-content: center;
       align-items: center;
     }
-    /* Texto principal dentro del cuadro */
+    /* Texto principal "Touch me!" en otra fuente y cursiva */
     #touchText {
+      font-family: 'Georgia', serif;
+      font-style: italic;
       pointer-events: none;
     }
-    /* Contenedor para la regla de dinámica en la parte izquierda */
+    /* Contenedor para la regla de dinámica (matices) centrado en el cuadro */
     #dynamicMarkingsContainer {
       position: absolute;
-      left: 10px;
-      top: 10px;
-      bottom: 10px;
+      left: 0;
+      right: 0;
+      top: 0;
+      bottom: 0;
       display: flex;
       flex-direction: column;
-      justify-content: space-between;
-      align-items: flex-start;
+      justify-content: space-evenly;
+      align-items: center;
       font-size: 0.7em;
       color: white;
-      width: auto;
       pointer-events: none;
     }
-    /* Cada matiz con línea inferior */
+    /* Cada matiz ocupa todo el ancho y tiene línea horizontal inferior */
     #dynamicMarkingsContainer > div {
       width: 100%;
-      text-align: left;
+      text-align: center;
       border-bottom: 1px solid white;
-      padding-bottom: 2px;
+      margin: 0;
+      padding: 0 5px;
     }
+    /* Quitar la línea en el último matiz */
     #dynamicMarkingsContainer > div:last-child {
       border-bottom: none;
     }
@@ -131,7 +135,7 @@
     <div id="copyright">
       <a href="https://www.youtube.com/@rafgim" target="_blank" style="color: inherit; text-decoration: none;">© By Rafael Gimeno</a>
     </div>
-    <!-- Cuadro de Touch con texto y regla dinámica a la izquierda -->
+    <!-- Cuadro de Touch con texto y regla dinámica centrada -->
     <div id="touchBox">
       <span id="touchText">Touch me!</span>
       <div id="dynamicMarkingsContainer">
