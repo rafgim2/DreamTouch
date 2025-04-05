@@ -39,11 +39,11 @@
       margin-top: 5px;
       font-size: 0.9em;
     }
-    /* Cuadro grande para "Touch me!" */
+    /* Cuadro grande para "Touch me!" (ahora de doble altura: 400px) */
     #touchBox {
       margin: 20px auto;
       width: 80%;
-      height: 200px;
+      height: 400px;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -252,7 +252,19 @@
     });
     
     // --- EVENTO PARA EL CUADRO "Touch me!" ---
-    function handleTouch() {
+    function handleTouch(e) {
+      // Obtener la posición vertical relativa al touchBox
+      var rect = e.currentTarget.getBoundingClientRect();
+      var y;
+      if (e.touches && e.touches.length > 0) {
+        y = e.touches[0].clientY;
+      } else {
+        y = e.clientY;
+      }
+      var relativeY = (y - rect.top) / rect.height;
+      // Factor: tope = 1.0 (más fuerte) y fondo = 0.0 (más bajo)
+      var volumeFactor = 1 - relativeY;
+      
       // Cambiar el fondo a un color aleatorio
       var randomColor = '#' + Math.floor(Math.random() * 16777215).toString(16);
       document.body.style.backgroundColor = randomColor;
@@ -265,29 +277,29 @@
                Math.abs(notesToPlay[groupEnd].time - notesToPlay[currentNoteIndex].time) < groupThreshold) {
           groupEnd++;
         }
-        // Reproducir todas las notas agrupadas
+        // Reproducir todas las notas agrupadas con el volumen ajustado
         for (var i = currentNoteIndex; i < groupEnd; i++) {
           var note = notesToPlay[i];
-          playPianoNote(note.velocity / 127, note.noteNumber);
+          playPianoNote((note.velocity / 127) * volumeFactor, note.noteNumber);
         }
         currentNoteIndex = groupEnd;
         if (currentNoteIndex >= notesToPlay.length) {
           currentNoteIndex = 0; // Reinicia para permitir la reproducción continua
         }
       } else {
-        // Si no hay MIDI cargado, reproducir la nota por defecto
-        playPianoNote(0.35, defaultMidiNote);
+        // Si no hay MIDI cargado, reproducir la nota por defecto con el volumen ajustado
+        playPianoNote(0.35 * volumeFactor, defaultMidiNote);
       }
     }
     
-    // Agregar un único evento según el tipo de dispositivo
+    // Agregar un único evento según el tipo de dispositivo, pasando el objeto evento
     var touchBox = document.getElementById('touchBox');
     if (window.PointerEvent) {
       touchBox.addEventListener('pointerdown', handleTouch);
     } else if ('ontouchstart' in window) {
       touchBox.addEventListener('touchstart', function(e) {
         e.preventDefault(); // Evita que se dispare el clic posteriormente
-        handleTouch();
+        handleTouch(e);
       });
     } else {
       touchBox.addEventListener('click', handleTouch);
