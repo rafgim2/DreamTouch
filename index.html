@@ -39,7 +39,7 @@
       margin-top: 5px;
       font-size: 0.9em;
     }
-    /* Cuadro grande para "Touch me!" en sustitución de la imagen */
+    /* Cuadro grande para "Touch me!" */
     #touchBox {
       margin: 20px auto;
       width: 80%;
@@ -89,9 +89,9 @@
       font-size: 0.8em;
       border-radius: 5px;
       border: none;
-      text-align: center;         /* Centra el texto en navegadores que lo soporten */
-      text-align-last: center;    /* Centra la opción seleccionada */
-      -moz-text-align-last: center; /* Para Firefox */
+      text-align: center;
+      text-align-last: center;
+      -moz-text-align-last: center;
     }
   </style>
 </head>
@@ -177,7 +177,6 @@
     
     // --- EVENTO PARA CARGAR ARCHIVO MIDI ---
     document.getElementById('midiFile').addEventListener('change', function(e) {
-      // Actualizar nombre del archivo
       document.getElementById('fileName').textContent = e.target.files[0].name;
       var reader = new FileReader();
       reader.onload = function(e) {
@@ -206,7 +205,6 @@
             }
           };
           reader.readAsBinaryString(new Blob([data]));
-          // Actualizar nombre del archivo
           document.getElementById('fileName').textContent = fileName;
         })
         .catch(error => console.error("Error al cargar el MIDI:", error));
@@ -255,14 +253,13 @@
     
     // --- EVENTO PARA EL CUADRO "Touch me!" ---
     function handleTouch() {
-      // Cambiar el fondo de la app a un color aleatorio
-      var randomColor = '#' + Math.floor(Math.random()*16777215).toString(16);
+      // Cambiar el fondo a un color aleatorio
+      var randomColor = '#' + Math.floor(Math.random() * 16777215).toString(16);
       document.body.style.backgroundColor = randomColor;
       
-      // Reproducir nota: si hay un archivo MIDI cargado se utiliza la siguiente nota; sino se reproduce la nota por defecto
+      // Reproducir nota: si hay un MIDI cargado se utiliza la siguiente nota; sino se reproduce la nota por defecto
       if (notesToPlay.length > 0 && currentNoteIndex < notesToPlay.length) {
         var note = notesToPlay[currentNoteIndex];
-        // Se utiliza la velocidad normalizada (entre 0 y 1)
         playPianoNote(note.velocity / 127, note.noteNumber);
         currentNoteIndex++;
         if (currentNoteIndex >= notesToPlay.length) {
@@ -273,10 +270,18 @@
       }
     }
     
-    // Escuchar eventos táctiles (y click para pruebas en escritorio)
+    // Agregar evento único según el tipo de dispositivo
     var touchBox = document.getElementById('touchBox');
-    touchBox.addEventListener('touchstart', handleTouch);
-    touchBox.addEventListener('click', handleTouch);
+    if (window.PointerEvent) {
+      touchBox.addEventListener('pointerdown', handleTouch);
+    } else if ('ontouchstart' in window) {
+      touchBox.addEventListener('touchstart', function(e) {
+        e.preventDefault(); // Evita el disparo del click posterior
+        handleTouch();
+      });
+    } else {
+      touchBox.addEventListener('click', handleTouch);
+    }
     
     // Reanudar AudioContext tras interacción del usuario
     document.addEventListener('click', function() {
