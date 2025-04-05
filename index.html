@@ -22,8 +22,9 @@
       margin: 0;
       transition: background-color 0.3s ease;
     }
-    /* Contenedor central con borde verde claro y texto centrado en negro */
+    /* Contenedor central centrado */
     #container {
+      margin: auto;
       text-align: center;
       border: 6px solid #90EE90;
       padding: 30px;
@@ -33,7 +34,7 @@
       box-sizing: border-box;
     }
     h1 {
-      margin: 0;
+      margin: 0 auto;
       font-size: 3em;
       text-align: center;
     }
@@ -41,7 +42,7 @@
       margin-top: 5px;
       font-size: 0.9em;
     }
-    /* Cuadro de touch con fondo negro, sin texto interno, de 400px de alto */
+    /* Cuadro de touch: 400px de alto, fondo negro */
     #touchBox {
       margin: 20px auto;
       width: 100%;
@@ -50,14 +51,14 @@
       position: relative;
       overflow: hidden;
     }
-    /* Contenedor interno que divide el cuadro en 6 franjas horizontales iguales */
+    /* División horizontal en 6 franjas iguales */
     #dynamicMarkingsContainer {
       display: flex;
       flex-direction: column;
       height: 100%;
       width: 100%;
     }
-    /* Cada franja ocupa la misma altura, centrada y con borde inferior */
+    /* Cada franja se centra y se separa con una línea horizontal */
     .dynamicBand {
       flex: 1;
       display: flex;
@@ -67,7 +68,6 @@
       color: white;
       border-bottom: 1px solid white;
     }
-    /* Quitar borde inferior en la última franja */
     .dynamicBand:last-child {
       border-bottom: none;
     }
@@ -85,16 +85,16 @@
     #midiFile {
       display: none;
     }
-    /* Nombre del archivo en texto en negro */
+    /* Nombre del archivo */
     #fileName {
       margin-top: 0px;
       font-style: italic;
       color: black;
     }
-    /* Selector de canciones de muestra */
+    /* Selector de canciones */
     #sampleSongsContainer {
       margin-top: 10px;
-      display: flex;            
+      display: flex;
       flex-direction: column;
       align-items: center;
       gap: 5px;
@@ -107,9 +107,9 @@
       border: none;
       text-align: center;
     }
-    /* Mayor separación debajo del cuadro */
+    /* Mayor separación debajo del cuadro de touch */
     #buttons {
-      margin-top: 40px;
+      margin-top: 60px;
     }
   </style>
 </head>
@@ -121,7 +121,7 @@
         © By Rafael Gimeno
       </a>
     </div>
-    <!-- Cuadro de touch dividido en 6 franjas horizontales -->
+    <!-- Cuadro de touch dividido en 6 franjas -->
     <div id="touchBox">
       <div id="dynamicMarkingsContainer">
         <div class="dynamicBand">Fortissimo</div>
@@ -137,7 +137,7 @@
         Cargar Archivo MIDI
         <input type="file" id="midiFile" accept=".mid,.midi,audio/midi,audio/x-midi,application/x-midi">
       </label>
-      <!-- Selector de canciones de muestra -->
+      <!-- Selector de canciones -->
       <div id="sampleSongsContainer">
         <label for="sampleSongs">Canciones de muestra:</label>
         <select id="sampleSongs">
@@ -156,7 +156,6 @@
           <option value="Satie Gymnopedie n1.mid">Satie - Gymnopedie n1.mid</option>
         </select>
       </div>
-      <!-- Mostrar el nombre del archivo cargado -->
       <div id="fileName"></div>
     </div>
   </div>
@@ -166,7 +165,7 @@
     var notesToPlay = [];
     var currentNoteIndex = 0;
     
-    // CONFIGURACIÓN DEL AUDIO: usando el piano normal (acoustic_grand_piano)
+    // CONFIGURACIÓN DEL AUDIO (piano normal)
     var audioContext = new (window.AudioContext || window.webkitAudioContext)();
     var pianoInstrument = null;
     if (window.Soundfont && typeof window.Soundfont.instrument === 'function') {
@@ -186,7 +185,7 @@
     var noteDuration = 2.0;
     var defaultMidiNote = 60; // C4
     
-    // Función para convertir número MIDI a nota (ej. "C4")
+    // Función para convertir número MIDI a nombre (ej. "C4")
     function midiNoteToNoteName(midi) {
       var octave = Math.floor(midi / 12) - 1;
       var noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -204,7 +203,7 @@
       }
     }
     
-    // --- EVENTO PARA CARGAR ARCHIVO MIDI ---
+    // --- CARGAR ARCHIVO MIDI ---
     document.getElementById('midiFile').addEventListener('change', function(e) {
       document.getElementById('fileName').textContent = e.target.files[0].name;
       var reader = new FileReader();
@@ -219,7 +218,7 @@
       reader.readAsBinaryString(e.target.files[0]);
     });
     
-    // Función para cargar un MIDI desde una URL
+    // Función para cargar un MIDI desde URL
     function loadMidiFromUrl(url, fileName) {
       fetch(url)
         .then(response => response.arrayBuffer())
@@ -269,7 +268,7 @@
       console.log("Notas MIDI extraídas:", notesToPlay);
     }
     
-    // --- EVENTO PARA EL SELECTOR DE CANCIONES DE MUESTRA ---
+    // --- SELECTOR DE CANCIONES DE MUESTRA ---
     document.getElementById('sampleSongs').addEventListener('change', function() {
       if (this.value) {
         const fileName = this.value;
@@ -278,7 +277,7 @@
       }
     });
     
-    // Función auxiliar para generar un color aleatorio
+    // Función auxiliar para obtener un color aleatorio
     function getRandomColor() {
       return '#' + Math.floor(Math.random() * 16777215).toString(16);
     }
@@ -288,14 +287,14 @@
       var rect = e.currentTarget.getBoundingClientRect();
       var y = (e.touches && e.touches.length > 0) ? e.touches[0].clientY : e.clientY;
       var relativeY = (y - rect.top) / rect.height;
-      // Calcular el "MIDI velocity" efectivo: 100 en la parte superior y 15 en la inferior
+      // Calcular el "MIDI velocity" efectivo: 100 (parte superior) a 15 (parte inferior)
       var effectiveVelocity = 15 + (100 - 15) * (1 - relativeY);
       var effectiveGain = effectiveVelocity / 100; // Valor entre 0.15 y 1
       
-      // Cambiar únicamente el fondo del body a un color aleatorio
+      // Cambiar el fondo del body a un color aleatorio
       document.body.style.backgroundColor = getRandomColor();
       
-      // Reproducir notas agrupadas usando el gain calculado
+      // Reproducir notas (agrupadas) usando el gain calculado
       if (notesToPlay.length > 0 && currentNoteIndex < notesToPlay.length) {
         var groupThreshold = 0.001;
         var groupEnd = currentNoteIndex + 1;
@@ -316,7 +315,7 @@
       }
     }
     
-    // Agregar el evento según el tipo de dispositivo
+    // Agregar evento según el tipo de dispositivo
     var touchBox = document.getElementById('touchBox');
     if (window.PointerEvent) {
       touchBox.addEventListener('pointerdown', handleTouch);
@@ -329,7 +328,7 @@
       touchBox.addEventListener('click', handleTouch);
     }
     
-    // Reanudar el AudioContext tras la interacción
+    // Reanudar AudioContext tras interacción
     document.addEventListener('click', function() {
       if (audioContext.state === 'suspended') {
         audioContext.resume().then(() => {
@@ -338,7 +337,7 @@
       }
     });
     
-    // Cargar MIDI por defecto al cargar la página
+    // Cargar MIDI por defecto al iniciar
     window.addEventListener('load', loadDefaultMidi);
   </script>
 </body>
