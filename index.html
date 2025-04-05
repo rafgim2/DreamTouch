@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -12,7 +12,7 @@
   <script src="https://cdn.jsdelivr.net/gh/gasman/jasmid@master/midifile.js"></script>
   <script src="https://unpkg.com/soundfont-player/dist/soundfont-player.js"></script>
   <style>
-    /* Fondo de la página: inicialmente azul claro */
+    /* Fondo de la página: inicialmente blanco */
     body {
       background-color: #FFFFFF;
       display: flex;
@@ -22,12 +22,12 @@
       margin: 0;
       transition: background-color 0.3s ease;
     }
-    /* Contenedor principal centrado con borde amarillo y disposición en columna */
+    /* Contenedor principal centrado con borde (ahora sin especificar color en el borde, puedes ajustarlo) */
     #container {
       display: flex;
       flex-direction: column;
       align-items: center;
-      border: 6px #000000;
+      border: 6px solid #000000;
       padding: 30px;
       background-color: #FFFFFF;
       color: black;
@@ -41,10 +41,10 @@
     }
     #copyright {
       margin-bottom: 20px;
-     margin-top:-10px;
+      margin-top: -10px;
       font-size: 0.9em;
     }
-    /* Cuadro de toque: fondo negro, dividido en 6 franjas iguales, sin texto interno */
+    /* Cuadro de toque: fondo negro, dividido en 6 franjas iguales */
     #touchBox {
       width: 100%;
       height: 400px;
@@ -174,10 +174,11 @@
     var audioContext = new (window.AudioContext || window.webkitAudioContext)();
     var pianoInstrument = null;
     if (window.Soundfont && typeof window.Soundfont.instrument === 'function') {
-      window.Soundfont.instrument(audioContext, 'acoustic_grand_piano')
+      // Aquí usamos la URL "raw" de GitHub para cargar tu archivo SF2
+      window.Soundfont.instrument(audioContext, 'https://raw.githubusercontent.com/rafgim2/PRUEBAS/main/GeneralUser%20GS%20XG%20v1.471.sf2')
         .then(function(piano) {
           pianoInstrument = piano;
-          console.log("Instrumento de piano cargado.");
+          console.log("Instrumento SF2 cargado.");
         })
         .catch(function(error) {
           console.error("Error al cargar el instrumento:", error);
@@ -248,7 +249,7 @@
     
     // Cargar MIDI por defecto
     function loadDefaultMidi() {
-      const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/Beethoven%20Para%20Elisa.mid";
+      const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/PRUEBAS/main/Beethoven%20Para%20Elisa.mid";
       const defaultFileName = "Beethoven Para Elisa.mid";
       loadMidiFromUrl(defaultMidiUrl, defaultFileName);
     }
@@ -280,7 +281,7 @@
     document.getElementById('sampleSongs').addEventListener('change', function() {
       if (this.value) {
         const fileName = this.value;
-        const url = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/" + encodeURIComponent(fileName);
+        const url = "https://raw.githubusercontent.com/rafgim2/PRUEBAS/main/" + encodeURIComponent(fileName);
         loadMidiFromUrl(url, fileName);
       }
     });
