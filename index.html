@@ -22,9 +22,8 @@
       margin: 0;
       transition: background-color 0.3s ease;
     }
-    /* Contenedor central centrado */
+    /* Contenedor central con borde verde claro y texto centrado en negro */
     #container {
-      margin: auto;
       text-align: center;
       border: 6px solid #90EE90;
       padding: 30px;
@@ -34,7 +33,7 @@
       box-sizing: border-box;
     }
     h1 {
-      margin: 0 auto;
+      margin: 0;
       font-size: 3em;
       text-align: center;
     }
@@ -42,33 +41,32 @@
       margin-top: 5px;
       font-size: 0.9em;
     }
-    /* Cuadro de touch: 400px de alto, fondo negro */
+    /* Cuadro de toque: fondo negro, sin texto interno, dividido en 6 franjas iguales */
     #touchBox {
       margin: 20px auto;
       width: 100%;
       height: 400px;
       background-color: black;
       position: relative;
-      overflow: hidden;
-    }
-    /* División horizontal en 6 franjas iguales */
-    #dynamicMarkingsContainer {
       display: flex;
       flex-direction: column;
-      height: 100%;
-      width: 100%;
     }
-    /* Cada franja se centra y se separa con una línea horizontal */
-    .dynamicBand {
+    /* Cada franja ocupa igual espacio, centrando el texto y con línea inferior */
+    #dynamicMarkingsContainer {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    #dynamicMarkingsContainer > div {
       flex: 1;
       display: flex;
-      justify-content: center;
       align-items: center;
-      font-size: 0.8em;
-      color: white;
+      justify-content: center;
       border-bottom: 1px solid white;
+      font-size: 0.8em;
     }
-    .dynamicBand:last-child {
+    #dynamicMarkingsContainer > div:last-child {
       border-bottom: none;
     }
     /* Botón de cargar: fondo verde claro, texto negro */
@@ -85,13 +83,13 @@
     #midiFile {
       display: none;
     }
-    /* Nombre del archivo */
+    /* Nombre del archivo en estilo cursiva y en negro */
     #fileName {
       margin-top: 0px;
       font-style: italic;
       color: black;
     }
-    /* Selector de canciones */
+    /* Selector de canciones de muestra */
     #sampleSongsContainer {
       margin-top: 10px;
       display: flex;
@@ -107,9 +105,9 @@
       border: none;
       text-align: center;
     }
-    /* Mayor separación debajo del cuadro de touch */
+    /* Separación adicional debajo del cuadro */
     #buttons {
-      margin-top: 60px;
+      margin-top: 40px;
     }
   </style>
 </head>
@@ -117,19 +115,17 @@
   <div id="container">
     <h1>DreamTouch</h1>
     <div id="copyright">
-      <a href="https://www.youtube.com/@rafgim" target="_blank" style="color: inherit; text-decoration: none;">
-        © By Rafael Gimeno
-      </a>
+      <a href="https://www.youtube.com/@rafgim" target="_blank" style="color: inherit; text-decoration: none;">© By Rafael Gimeno</a>
     </div>
-    <!-- Cuadro de touch dividido en 6 franjas -->
+    <!-- Cuadro de toque dividido en franjas dinámicas -->
     <div id="touchBox">
       <div id="dynamicMarkingsContainer">
-        <div class="dynamicBand">Fortissimo</div>
-        <div class="dynamicBand">Forte</div>
-        <div class="dynamicBand">Mezzo-forte</div>
-        <div class="dynamicBand">Mezzo-piano</div>
-        <div class="dynamicBand">Piano</div>
-        <div class="dynamicBand">Pianissimo</div>
+        <div>Fortissimo</div>
+        <div>Forte</div>
+        <div>Mezzo-forte</div>
+        <div>Mezzo-piano</div>
+        <div>Piano</div>
+        <div>Pianissimo</div>
       </div>
     </div>
     <div id="buttons">
@@ -137,7 +133,7 @@
         Cargar Archivo MIDI
         <input type="file" id="midiFile" accept=".mid,.midi,audio/midi,audio/x-midi,application/x-midi">
       </label>
-      <!-- Selector de canciones -->
+      <!-- Selector de canciones de muestra -->
       <div id="sampleSongsContainer">
         <label for="sampleSongs">Canciones de muestra:</label>
         <select id="sampleSongs">
@@ -156,6 +152,7 @@
           <option value="Satie Gymnopedie n1.mid">Satie - Gymnopedie n1.mid</option>
         </select>
       </div>
+      <!-- Elemento para mostrar el nombre del archivo -->
       <div id="fileName"></div>
     </div>
   </div>
@@ -165,7 +162,7 @@
     var notesToPlay = [];
     var currentNoteIndex = 0;
     
-    // CONFIGURACIÓN DEL AUDIO (piano normal)
+    // CONFIGURACIÓN DEL AUDIO
     var audioContext = new (window.AudioContext || window.webkitAudioContext)();
     var pianoInstrument = null;
     if (window.Soundfont && typeof window.Soundfont.instrument === 'function') {
@@ -185,12 +182,15 @@
     var noteDuration = 2.0;
     var defaultMidiNote = 60; // C4
     
-    // Función para convertir número MIDI a nombre (ej. "C4")
+    // Función para convertir número MIDI a nota (ej. "C4")
     function midiNoteToNoteName(midi) {
       var octave = Math.floor(midi / 12) - 1;
       var noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
       return noteNames[midi % 12] + octave;
     }
+    
+    // Arreglo de gain para cada nivel dinámico (de arriba: Fortissimo, a abajo: Pianissimo)
+    var gainLevels = [1.0, 0.8, 0.65, 0.5, 0.35, 0.2];
     
     // Función para reproducir nota usando soundfont-player.
     function playPianoNote(gain, midiNote) {
@@ -203,7 +203,7 @@
       }
     }
     
-    // --- CARGAR ARCHIVO MIDI ---
+    // --- EVENTO PARA CARGAR ARCHIVO MIDI ---
     document.getElementById('midiFile').addEventListener('change', function(e) {
       document.getElementById('fileName').textContent = e.target.files[0].name;
       var reader = new FileReader();
@@ -218,7 +218,7 @@
       reader.readAsBinaryString(e.target.files[0]);
     });
     
-    // Función para cargar un MIDI desde URL
+    // Función para cargar un MIDI desde una URL
     function loadMidiFromUrl(url, fileName) {
       fetch(url)
         .then(response => response.arrayBuffer())
@@ -240,7 +240,7 @@
     
     // Cargar MIDI por defecto
     function loadDefaultMidi() {
-      const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/DreamTouch/main/Beethoven%20Para%20Elisa.mid";
+      const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/Beethoven%20Para%20Elisa.mid";
       const defaultFileName = "Beethoven Para Elisa.mid";
       loadMidiFromUrl(defaultMidiUrl, defaultFileName);
     }
@@ -268,33 +268,34 @@
       console.log("Notas MIDI extraídas:", notesToPlay);
     }
     
-    // --- SELECTOR DE CANCIONES DE MUESTRA ---
+    // --- EVENTO PARA EL SELECTOR DE CANCIONES DE MUESTRA ---
     document.getElementById('sampleSongs').addEventListener('change', function() {
       if (this.value) {
         const fileName = this.value;
-        const url = "https://raw.githubusercontent.com/rafgim2/DreamTouch/main/" + encodeURIComponent(fileName);
+        const url = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/" + encodeURIComponent(fileName);
         loadMidiFromUrl(url, fileName);
       }
     });
     
-    // Función auxiliar para obtener un color aleatorio
+    // Función auxiliar para generar un color aleatorio
     function getRandomColor() {
       return '#' + Math.floor(Math.random() * 16777215).toString(16);
     }
     
-    // --- EVENTO PARA EL CUADRO "Touch me!" ---
+    // --- EVENTO PARA EL CUADRO DE TOQUE ---
     function handleTouch(e) {
       var rect = e.currentTarget.getBoundingClientRect();
       var y = (e.touches && e.touches.length > 0) ? e.touches[0].clientY : e.clientY;
       var relativeY = (y - rect.top) / rect.height;
-      // Calcular el "MIDI velocity" efectivo: 100 (parte superior) a 15 (parte inferior)
-      var effectiveVelocity = 15 + (100 - 15) * (1 - relativeY);
-      var effectiveGain = effectiveVelocity / 100; // Valor entre 0.15 y 1
+      // Determinar en qué franja se encuentra (0 a 5)
+      var stripeIndex = Math.floor(relativeY * 6);
+      if (stripeIndex >= 6) stripeIndex = 5;
+      var effectiveGain = gainLevels[stripeIndex];
       
-      // Cambiar el fondo del body a un color aleatorio
+      // Cambiar únicamente el fondo del body a un color aleatorio
       document.body.style.backgroundColor = getRandomColor();
       
-      // Reproducir notas (agrupadas) usando el gain calculado
+      // Reproducir notas agrupadas usando el gain calculado
       if (notesToPlay.length > 0 && currentNoteIndex < notesToPlay.length) {
         var groupThreshold = 0.001;
         var groupEnd = currentNoteIndex + 1;
@@ -315,7 +316,7 @@
       }
     }
     
-    // Agregar evento según el tipo de dispositivo
+    // Agregar el evento según el tipo de dispositivo
     var touchBox = document.getElementById('touchBox');
     if (window.PointerEvent) {
       touchBox.addEventListener('pointerdown', handleTouch);
@@ -328,7 +329,7 @@
       touchBox.addEventListener('click', handleTouch);
     }
     
-    // Reanudar AudioContext tras interacción
+    // Reanudar el AudioContext tras la interacción
     document.addEventListener('click', function() {
       if (audioContext.state === 'suspended') {
         audioContext.resume().then(() => {
@@ -337,7 +338,7 @@
       }
     });
     
-    // Cargar MIDI por defecto al iniciar
+    // Cargar MIDI por defecto al cargar la página
     window.addEventListener('load', loadDefaultMidi);
   </script>
 </body>
