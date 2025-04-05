@@ -51,7 +51,7 @@
       font-weight: bold;
       user-select: none;
       cursor: pointer;
-      position: relative; /* Para posicionar la regla dinámica */
+      position: relative;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -60,22 +60,23 @@
     #touchText {
       pointer-events: none;
     }
-    /* Contenedor para la regla de dinámica (columna vertical uniforme) */
+    /* Contenedor para la regla de dinámica (matices) en la parte izquierda */
     #dynamicMarkingsContainer {
       position: absolute;
-      right: 10px;
+      left: 10px;
       top: 0;
       bottom: 0;
       display: flex;
       flex-direction: column;
       justify-content: space-between;
-      align-items: flex-end;
+      align-items: flex-start;
       font-size: 0.7em;
       color: white;
-      padding: 10px 0;
+      padding: 10px;
+      border-right: 1px dotted white;
       pointer-events: none;
     }
-    /* Botón de cargar y sus estilos: fondo verde claro, texto negro */
+    /* Botón de cargar: fondo verde claro, texto negro */
     #loadButton {
       background-color: #90EE90;
       color: black;
@@ -121,7 +122,7 @@
     <div id="copyright">
       <a href="https://www.youtube.com/@rafgim" target="_blank" style="color: inherit; text-decoration: none;">© By Rafael Gimeno</a>
     </div>
-    <!-- Cuadro de Touch con texto y regla dinámica a la derecha -->
+    <!-- Cuadro de Touch con texto y regla dinámica a la izquierda -->
     <div id="touchBox">
       <span id="touchText">Touch me!</span>
       <div id="dynamicMarkingsContainer">
@@ -183,8 +184,8 @@
       console.error("No se encontró el método instrument en Soundfont.");
     }
     
-    // Duración por defecto de las notas (ahora 1.5 segundos)
-    var noteDuration = 1.5;
+    // Duración de las notas: 2 segundos
+    var noteDuration = 2.0;
     var defaultMidiNote = 60; // C4
     
     // Función para convertir número MIDI a nota (ej. "C4")
@@ -195,11 +196,11 @@
     }
     
     // Función para reproducir nota usando soundfont-player.
-    function playPianoNote(volume, midiNote) {
+    function playPianoNote(gain, midiNote) {
       if (pianoInstrument) {
         var noteName = midiNoteToNoteName(midiNote);
-        pianoInstrument.play(noteName, audioContext.currentTime, { gain: volume, duration: noteDuration });
-        console.log("Nota reproducida:", noteName, "volumen:", volume);
+        pianoInstrument.play(noteName, audioContext.currentTime, { gain: gain, duration: noteDuration });
+        console.log("Nota reproducida:", noteName, "gain:", gain);
       } else {
         console.warn("El instrumento aún no se ha cargado.");
       }
@@ -261,8 +262,7 @@
           if (event.subtype === 'noteOn') {
             notesToPlay.push({
               noteNumber: event.noteNumber,
-              velocity: event.velocity,
-              channel: event.channel,
+              // Ignoramos la velocidad del MIDI para usar la dinámica del toque
               time: absoluteTime
             });
           }
@@ -276,7 +276,6 @@
     document.getElementById('sampleSongs').addEventListener('change', function() {
       if (this.value) {
         const fileName = this.value;
-        // Se utiliza la URL del repositorio original
         const url = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/" + encodeURIComponent(fileName);
         loadMidiFromUrl(url, fileName);
       }
@@ -289,17 +288,17 @@
     
     // --- EVENTO PARA EL CUADRO "Touch me!" ---
     function handleTouch(e) {
-      // Obtener la posición vertical relativa dentro del touchBox
       var rect = e.currentTarget.getBoundingClientRect();
       var y = (e.touches && e.touches.length > 0) ? e.touches[0].clientY : e.clientY;
       var relativeY = (y - rect.top) / rect.height;
-      // Calcular el factor de volumen: más fuerte en la parte superior
-      var volumeFactor = 1 - relativeY;
+      // Calcular el "MIDI velocity" efectivo: 127 en la parte superior y 30 en la inferior
+      var effectiveVelocity = 30 + (127 - 30) * (1 - relativeY);
+      var effectiveGain = effectiveVelocity / 127;
       
       // Cambiar únicamente el fondo del body a un color aleatorio
       document.body.style.backgroundColor = getRandomColor();
       
-      // Reproducir notas según el grupo (manteniendo la agrupación del MIDI)
+      // Reproducir notas agrupadas (usando el gain calculado)
       if (notesToPlay.length > 0 && currentNoteIndex < notesToPlay.length) {
         var groupThreshold = 0.001;
         var groupEnd = currentNoteIndex + 1;
@@ -309,32 +308,31 @@
         }
         for (var i = currentNoteIndex; i < groupEnd; i++) {
           var note = notesToPlay[i];
-          playPianoNote((note.velocity / 127) * volumeFactor, note.noteNumber);
+          playPianoNote(effectiveGain, note.noteNumber);
         }
         currentNoteIndex = groupEnd;
         if (currentNoteIndex >= notesToPlay.length) {
           currentNoteIndex = 0;
         }
       } else {
-        // Si no hay MIDI cargado, reproducir la nota por defecto con el volumen ajustado
-        playPianoNote(0.35 * volumeFactor, defaultMidiNote);
+        playPianoNote(effectiveGain, defaultMidiNote);
       }
     }
     
-    // Agregar un único evento según el tipo de dispositivo
+    // Agregar el evento según el tipo de dispositivo
     var touchBox = document.getElementById('touchBox');
     if (window.PointerEvent) {
       touchBox.addEventListener('pointerdown', handleTouch);
     } else if ('ontouchstart' in window) {
       touchBox.addEventListener('touchstart', function(e) {
-        e.preventDefault(); // Evita que se dispare el clic posteriormente
+        e.preventDefault();
         handleTouch(e);
       });
     } else {
       touchBox.addEventListener('click', handleTouch);
     }
     
-    // Reanudar AudioContext tras la interacción del usuario
+    // Reanudar el AudioContext tras la interacción
     document.addEventListener('click', function() {
       if (audioContext.state === 'suspended') {
         audioContext.resume().then(() => {
@@ -343,7 +341,7 @@
       }
     });
     
-    // Al cargar la página se carga el MIDI por defecto
+    // Cargar MIDI por defecto al cargar la página
     window.addEventListener('load', loadDefaultMidi);
   </script>
 </body>
