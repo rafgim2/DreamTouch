@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <!-- Meta viewport sin restricciones de rotación -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-  <title>DreamTouch </title>
+  <title>DreamTouch</title>
   <!-- Scripts MIDI y soundfont -->
   <script src="https://cdn.jsdelivr.net/npm/webmidiapishim"></script>
   <script src="https://cdn.jsdelivr.net/npm/webmidi@2"></script>
@@ -22,9 +22,11 @@
       margin: 0;
       transition: background-color 0.3s ease;
     }
-    /* Contenedor central con borde amarillo y texto centrado en negro */
+    /* Contenedor principal centrado con borde amarillo y disposición en columna */
     #container {
-      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       border: 6px solid yellow;
       padding: 30px;
       background-color: #ADD8E6;
@@ -33,17 +35,16 @@
       box-sizing: border-box;
     }
     h1 {
-      margin: 0;
+      margin: 0 0 20px 0;
       font-size: 3em;
       text-align: center;
     }
     #copyright {
-      margin-top: 5px;
+      margin-bottom: 20px;
       font-size: 0.9em;
     }
-    /* Cuadro de toque: fondo negro, sin texto interno, dividido en 6 franjas iguales */
+    /* Cuadro de toque: fondo negro, dividido en 6 franjas iguales, sin texto interno */
     #touchBox {
-      margin: 20px auto;
       width: 100%;
       height: 400px;
       background-color: black;
@@ -51,7 +52,7 @@
       display: flex;
       flex-direction: column;
     }
-    /* Contenedor para la regla de dinámica (matices) dividido en 6 franjas iguales */
+    /* Contenedor para la regla de dinámica: franjas horizontales con nombres completos, en blanco y sin selección de texto */
     #dynamicMarkingsContainer {
       width: 100%;
       height: 100%;
@@ -72,6 +73,15 @@
     #dynamicMarkingsContainer > div:last-child {
       border-bottom: none;
     }
+    /* Controles inferiores: se separan más verticalmente */
+    #buttons {
+      margin-top: 60px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+    }
     /* Botón de cargar: fondo verde claro, texto negro */
     #loadButton {
       background-color: #90EE90;
@@ -88,14 +98,12 @@
     }
     /* Nombre del archivo en cursiva y en negro */
     #fileName {
-      margin-top: 0px;
       font-style: italic;
       color: black;
     }
     /* Selector de canciones de muestra */
     #sampleSongsContainer {
-      margin-top: 10px;
-      display: flex;            
+      display: flex;
       flex-direction: column;
       align-items: center;
       gap: 5px;
@@ -108,20 +116,15 @@
       border: none;
       text-align: center;
     }
-    /* Separación adicional debajo del cuadro */
-    #buttons {
-      margin-top: 40px;
-      margin-bottom: 20px;
-    }
   </style>
 </head>
 <body>
   <div id="container">
-    <h1>DreamTouch </h1>
+    <h1>DreamTouch</h1>
     <div id="copyright">
       <a href="https://www.youtube.com/@rafgim" target="_blank" style="color: inherit; text-decoration: none;">© By Rafael Gimeno</a>
     </div>
-    <!-- Cuadro de toque dividido en franjas de dinámica -->
+    <!-- Área de toque: dividida en franjas dinámicas -->
     <div id="touchBox">
       <div id="dynamicMarkingsContainer">
         <div>Fortissimo</div>
@@ -132,12 +135,12 @@
         <div>Pianissimo</div>
       </div>
     </div>
+    <!-- Controles inferiores -->
     <div id="buttons">
       <label for="midiFile" id="loadButton">
         Cargar Archivo MIDI
         <input type="file" id="midiFile" accept=".mid,.midi,audio/midi,audio/x-midi,application/x-midi">
       </label>
-      <!-- Selector de canciones de muestra -->
       <div id="sampleSongsContainer">
         <label for="sampleSongs">Canciones de muestra:</label>
         <select id="sampleSongs">
@@ -156,7 +159,6 @@
           <option value="Satie Gymnopedie n1.mid">Satie - Gymnopedie n1.mid</option>
         </select>
       </div>
-      <!-- Mostrar nombre del archivo -->
       <div id="fileName"></div>
     </div>
   </div>
@@ -194,7 +196,7 @@
     }
     
     // Arreglo de gain para cada nivel dinámico (de arriba a abajo: Fortissimo a Pianissimo)
-    var gainLevels = [1.0, 0.8, 0.65, 0.5, 0.35, 0.2];
+    var gainLevels = [1.0, 0.8, 0.65, 0.5, 0.35, 0.15];
     
     // Función para reproducir nota usando soundfont-player.
     function playPianoNote(gain, midiNote) {
@@ -296,7 +298,7 @@
       if (stripeIndex >= 6) stripeIndex = 5;
       var effectiveGain = gainLevels[stripeIndex];
       
-      // Cambiar únicamente el fondo del body a un color aleatorio
+      // Cambiar el fondo del body a un color aleatorio
       document.body.style.backgroundColor = getRandomColor();
       
       // Reproducir notas agrupadas usando el gain calculado
