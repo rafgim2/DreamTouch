@@ -191,8 +191,7 @@
           <option value="Beethoven Para Elisa.mid">Beethoven Para Elisa.mid</option>
           <option value="Beethoven Patética.mid">Beethoven - Patética.mid</option>
           <option value="Clementi Sonatina.mid">Clementi - Sonatina.mid</option>
-          <option value="Mozart Sonata KV 545 2nd Mov.mid">Mozart - Sonata KV 545 2nd Mov.mid</option>
-          <option value="Gustavo Pascual Paquito el chocolatero.mid">Gustavo Pascual - Paquito el chocolatero.mid</option>
+          
           <option value="Handel & Halvorsen Passacaglia.mid">Handel & Halvorsen - Passacaglia.mid</option>
           <option value="R.Korsakov El vuelo del moscardón.mid">R.Korsakov - El vuelo del moscardón.mid</option>
           <option value="Rachmaninoff Concert nº2 Tercer mov.mid">Rachmaninoff - Concert nº2 Tercer mov.mid</option>
@@ -352,7 +351,7 @@
 
     // Cargar MIDI por defecto
     function loadDefaultMidi() {
-      const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/Beethoven Para Elisa.mid";
+      const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/Handel & Halvorsen - Passacaglia.mid";
       const defaultFileName = "Beethoven Para Elisa.mid";
       loadMidiFromUrl(defaultMidiUrl, defaultFileName);
     }
@@ -395,35 +394,59 @@
     }
 
     // Manejo de eventos de toque/puntero
-    function handlePointerDown(e) {
-      if (e.pointerType === "mouse" && e.buttons !== 1) return;
-      // Se elimina el uso de pointer capture para evitar problemas con toques rápidos
 
+    // Al presionar (pointerdown o touchstart)
+    function handlePointerDown(e) {
+      // Evitar múltiples disparos con mouse
+      if (e.pointerType === "mouse" && e.buttons !== 1) return;
+      // Comentamos estas líneas para evitar problemas con toques rápidos
+      // if (e.target.setPointerCapture) {
+      //   e.target.setPointerCapture(e.pointerId);
+      // }
       var rect = e.currentTarget.getBoundingClientRect();
       var y = e.clientY;
       var relativeY = (y - rect.top) / rect.height;
       var effectiveGain = computeEffectiveGain(relativeY);
       document.body.style.backgroundColor = getRandomColor();
 
-      // Se simplifica: se utiliza una sola nota por cada toque
-      if (notesToPlay.length > 0) {
-        var note = notesToPlay[currentNoteIndex];
-        if (pedalOn) {
-          playPianoNote(effectiveGain, note.noteNumber);
-        } else {
-          activeNotes[e.pointerId] = [playNoteNonPedal(effectiveGain, note.noteNumber)];
+      var notesArray = [];
+      if (notesToPlay.length > 0 && currentNoteIndex < notesToPlay.length) {
+        var groupThreshold = 0.001;
+        var groupEnd = currentNoteIndex + 1;
+        while (groupEnd < notesToPlay.length &&
+               Math.abs(notesToPlay[groupEnd].time - notesToPlay[currentNoteIndex].time) < groupThreshold) {
+          groupEnd++;
         }
-        currentNoteIndex = (currentNoteIndex + 1) % notesToPlay.length;
+        for (var i = currentNoteIndex; i < groupEnd; i++) {
+          var note = notesToPlay[i];
+          if (pedalOn) {
+            playPianoNote(effectiveGain, note.noteNumber);
+          } else {
+            notesArray.push(playNoteNonPedal(effectiveGain, note.noteNumber));
+          }
+        }
+        currentNoteIndex = groupEnd;
+        if (currentNoteIndex >= notesToPlay.length) {
+          currentNoteIndex = 0;
+        }
       } else {
         if (pedalOn) {
           playPianoNote(effectiveGain, defaultMidiNote);
         } else {
-          activeNotes[e.pointerId] = [playNoteNonPedal(effectiveGain, defaultMidiNote)];
+          notesArray.push(playNoteNonPedal(effectiveGain, defaultMidiNote));
         }
+      }
+      if (!pedalOn) {
+        activeNotes[e.pointerId] = notesArray;
       }
     }
 
+    // Al levantar el dedo (pointerup o touchend)
     function handlePointerUp(e) {
+      // Comentamos estas líneas para evitar problemas con toques rápidos
+      // if (e.target.releasePointerCapture) {
+      //   e.target.releasePointerCapture(e.pointerId);
+      // }
       if (!pedalOn && activeNotes[e.pointerId]) {
         activeNotes[e.pointerId].forEach(function(noteObj) {
           noteObj.stop();
@@ -432,7 +455,7 @@
       }
     }
 
-    // Asignación de eventos en touchBox
+    // Asignación de eventos
     var touchBox = document.getElementById('touchBox');
     if (window.PointerEvent) {
       touchBox.addEventListener('pointerdown', handlePointerDown);
@@ -465,10 +488,6 @@
       });
       touchBox.addEventListener('click', handlePointerDown);
     }
-
-    // Agregar listeners a nivel de documento para asegurar que se capten todos los eventos de finalización
-    document.addEventListener('pointerup', handlePointerUp);
-    document.addEventListener('touchend', handlePointerUp);
 
     // Reanudar AudioContext en caso de suspensión
     document.addEventListener('click', function() {
