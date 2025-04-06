@@ -9,7 +9,7 @@
   <script>
     window.require = function() {};
   </script>
-  <!-- Scripts MIDI y soundfont (usando versión 0.12.0 de Soundfont-player desde cdn.jsdelivr.net) -->
+  <!-- Scripts MIDI y soundfont (versión 0.12.0 desde cdn.jsdelivr.net) -->
   <script src="https://cdn.jsdelivr.net/npm/webmidiapishim"></script>
   <script src="https://cdn.jsdelivr.net/npm/webmidi@2"></script>
   <script src="https://cdn.jsdelivr.net/gh/gasman/jasmid@master/stream.js"></script>
@@ -176,14 +176,20 @@
 
     // CONFIGURACIÓN DEL AUDIO
     var audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    
+    // Creamos un filtro de paso bajo para suavizar el timbre del piano
+    var filter = audioContext.createBiquadFilter();
+    filter.type = "lowpass";
+    filter.frequency.value = 1500; // Frecuencia de corte a 1500 Hz
+    filter.Q.value = 1;            // Valor Q (puedes ajustar este valor)
+    // Conectamos el filtro a la salida
+    filter.connect(audioContext.destination);
+
     var pianoInstrument = null;
     if (window.Soundfont && typeof window.Soundfont.instrument === 'function') {
-      // Cargamos el instrumento usando el paquete pre-renderizado de MusyngKite para "acoustic_grand_piano"
-      window.Soundfont.instrument(
-        audioContext,
-        'acoustic_grand_piano',
-        { soundfont: 'MusyngKite' }
-      ).then(function(piano) {
+      // Cargamos el piano "acoustic_grand_piano" usando el paquete MusyngKite
+      Soundfont.instrument(audioContext, 'acoustic_grand_piano', { soundfont: 'MusyngKite', destination: filter })
+        .then(function(piano) {
           pianoInstrument = piano;
           console.log("Instrumento Acoustic Grand Piano (MusyngKite) cargado.");
         })
@@ -198,25 +204,24 @@
     var noteDuration = 2.0;
     var defaultMidiNote = 60; // C4
 
-    // Función para convertir número MIDI a nota (ej. "C4")
+    // Función para convertir número MIDI a nombre de nota (ej. "C4")
     function midiNoteToNoteName(midi) {
       var octave = Math.floor(midi / 12) - 1;
       var noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
       return noteNames[midi % 12] + octave;
     }
 
-    // Calcula el gain de forma continua según la posición vertical
+    // Cálculo continuo del gain según la posición vertical
     function computeEffectiveGain(relativeY) {
       var minGain = 0.15;
       var maxGain = 1.0;
       return minGain + (maxGain - minGain) * (1 - relativeY);
     }
 
-    // Función para reproducir nota; se agrega la opción "velocity" para ayudar a seleccionar la muestra correcta
+    // Función para reproducir una nota, pasando además "velocity" para seleccionar la muestra adecuada (si el soundfont lo soporta)
     function playPianoNote(gain, midiNote) {
       if (pianoInstrument) {
         var noteName = midiNoteToNoteName(midiNote);
-        // Se pasa "velocity" (valor entre 0 y 127) calculado a partir del gain
         pianoInstrument.play(noteName, audioContext.currentTime, { gain: gain, duration: noteDuration, velocity: gain * 127 });
         console.log("Nota reproducida:", noteName, "gain:", gain, "velocity:", gain * 127);
       } else {
@@ -239,7 +244,7 @@
       reader.readAsBinaryString(e.target.files[0]);
     });
 
-    // Función para cargar un MIDI desde una URL
+    // Función para cargar un archivo MIDI desde una URL
     function loadMidiFromUrl(url, fileName) {
       fetch(url)
         .then(response => response.arrayBuffer())
@@ -259,7 +264,7 @@
         .catch(error => console.error("Error al cargar el MIDI:", error));
     }
 
-    // Cargar MIDI por defecto
+    // Cargar un MIDI por defecto
     function loadDefaultMidi() {
       const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/Beethoven Para Elisa.mid";
       const defaultFileName = "Beethoven Para Elisa.mid";
