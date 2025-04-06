@@ -400,10 +400,10 @@
     function handlePointerDown(e) {
       // Evitar múltiples disparos con mouse
       if (e.pointerType === "mouse" && e.buttons !== 1) return;
-      // Si el navegador soporta pointer capture, se asigna al inicio del toque
-      if (e.target.setPointerCapture) {
-        e.target.setPointerCapture(e.pointerId);
-      }
+      // Comentamos estas líneas para evitar problemas con toques rápidos
+      // if (e.target.setPointerCapture) {
+      //   e.target.setPointerCapture(e.pointerId);
+      // }
       var rect = e.currentTarget.getBoundingClientRect();
       var y = e.clientY;
       var relativeY = (y - rect.top) / rect.height;
@@ -444,10 +444,10 @@
 
     // Al levantar el dedo (pointerup o touchend)
     function handlePointerUp(e) {
-      // Si se usó pointer capture, liberarlo
-      if (e.target.releasePointerCapture) {
-        e.target.releasePointerCapture(e.pointerId);
-      }
+      // Comentamos estas líneas para evitar problemas con toques rápidos
+      // if (e.target.releasePointerCapture) {
+      //   e.target.releasePointerCapture(e.pointerId);
+      // }
       if (!pedalOn && activeNotes[e.pointerId]) {
         activeNotes[e.pointerId].forEach(function(noteObj) {
           noteObj.stop();
@@ -527,7 +527,6 @@
     pedalBtn.addEventListener('click', function() {
       pedalOn = !pedalOn;
       pedalBtn.textContent = pedalOn ? "Pedal ON" : "Pedal OFF";
-      // Cambiar el color de fondo y asegurar que el texto siga siendo negro
       if (pedalOn) {
         pedalBtn.style.backgroundColor = "#90EE90"; // Verde claro
       } else {
