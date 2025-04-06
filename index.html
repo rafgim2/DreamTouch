@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <!-- Meta viewport con user-scalable=no para evitar zoom accidental -->
+  <!-- Meta viewport para evitar zoom accidental -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>DreamTouch AR</title>
   <!-- Shim para evitar error de require -->
@@ -31,6 +31,7 @@
       height: 100vh;
       transition: background-color 0.3s ease;
     }
+    /* Interfaz MODO NORMAL */
     #container {
       position: relative;
       display: flex;
@@ -66,7 +67,7 @@
       cursor: pointer;
       z-index: 10;
     }
-    /* Área de toque: fondo negro, 6 franjas */
+    /* Área de toque: 6 franjas */
     #touchBox {
       width: 100%;
       height: 400px;
@@ -147,18 +148,18 @@
       border: none;
       text-align: center;
     }
-    /* Botón para iniciar AR */
+    /* Botón para iniciar AR (estilo minimalista y casi transparente) */
     #startARBtn {
-      background-color: #FFA500;
-      color: white;
+      background-color: transparent;
+      border: 2px solid rgba(0,0,0,0.5);
+      color: rgba(0,0,0,0.7);
       padding: 10px 20px;
       font-size: 1em;
-      border: none;
       border-radius: 5px;
       cursor: pointer;
       margin-top: 10px;
     }
-    /* Contenedor AR, inicialmente oculto */
+    /* Contenedor para el modo AR (inicialmente oculto) */
     #arContainer {
       position: absolute;
       top: 0;
@@ -171,13 +172,14 @@
   </style>
 </head>
 <body>
+  <!-- MODO NORMAL -->
   <div id="container">
     <button id="fullscreenBtn">⛶</button>
     <h1>DreamTouch</h1>
     <div id="copyright">
       <a href="https://www.youtube.com/@rafgim" target="_blank" style="color: inherit; text-decoration: none;">© By Rafael Gimeno</a>
     </div>
-    <!-- Área de toque modo normal -->
+    <!-- Área de toque -->
     <div id="touchBox">
       <div id="dynamicMarkingsContainer">
         <div>Fortissimo</div>
@@ -212,20 +214,15 @@
       <button id="startARBtn">START AR</button>
     </div>
   </div>
-  
-  <!-- Contenedor para el renderizado AR -->
+
+  <!-- Contenedor para el modo AR -->
   <div id="arContainer"></div>
-  
+
   <script>
-    /**************** MODO NORMAL (Código original) ****************/
-    // VARIABLES PARA LAS NOTAS MIDI
+    /**************** MODO NORMAL (igual que antes) ****************/
     var notesToPlay = [];
     var currentNoteIndex = 0;
-
-    // CONFIGURACIÓN DEL AUDIO
     var audioContext = new (window.AudioContext || window.webkitAudioContext)();
-
-    // Filtros para suavizar el sonido:
     var highpass = audioContext.createBiquadFilter();
     highpass.type = "highpass";
     highpass.frequency.value = 200;
@@ -234,14 +231,12 @@
     lowpass.frequency.value = 1500;
     highpass.connect(lowpass);
     lowpass.connect(audioContext.destination);
-
-    // Variable para el instrumento
     var pianoInstrument = null;
     if (window.Soundfont && typeof window.Soundfont.instrument === 'function') {
       Soundfont.instrument(audioContext, 'acoustic_grand_piano', { soundfont: 'MusyngKite' })
         .then(function(piano) {
           pianoInstrument = piano;
-          console.log("Instrumento Acoustic Grand Piano (MusyngKite) cargado.");
+          console.log("Instrumento Acoustic Grand Piano cargado.");
         })
         .catch(function(error) {
           console.error("Error al cargar el instrumento:", error);
@@ -249,25 +244,20 @@
     } else {
       console.error("No se encontró el método instrument en Soundfont.");
     }
-
-    // Nota por defecto
     var defaultMidiNote = 60; // C4
-    var noteDuration = 3.0; // Duración en modo PEDAL
+    var noteDuration = 3.0;
     var pedalOn = true;
     var activeNotes = {};
-
     function midiNoteToNoteName(midi) {
       var octave = Math.floor(midi / 12) - 1;
       var noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
       return noteNames[midi % 12] + octave;
     }
-
     function computeEffectiveGain(relativeY) {
       var minGain = 0.15;
       var maxGain = 1.0;
       return minGain + (maxGain - minGain) * (1 - relativeY);
     }
-
     function playPianoNote(gain, midiNote) {
       if (pianoInstrument) {
         var noteName = midiNoteToNoteName(midiNote);
@@ -288,7 +278,6 @@
         console.warn("El instrumento aún no se ha cargado.");
       }
     }
-
     function playNoteNonPedal(gain, midiNote) {
       if (pianoInstrument) {
         var noteName = midiNoteToNoteName(midiNote);
@@ -319,7 +308,6 @@
         console.warn("El instrumento aún no se ha cargado.");
       }
     }
-
     document.getElementById('midiFile').addEventListener('change', function(e) {
       document.getElementById('fileName').textContent = e.target.files[0].name;
       var reader = new FileReader();
@@ -333,7 +321,6 @@
       };
       reader.readAsBinaryString(e.target.files[0]);
     });
-
     function loadMidiFromUrl(url, fileName) {
       fetch(url)
         .then(response => response.arrayBuffer())
@@ -352,13 +339,11 @@
         })
         .catch(error => console.error("Error al cargar el MIDI:", error));
     }
-
     function loadDefaultMidi() {
       const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/Handel & Halvorsen Passacaglia.mid";
       const defaultFileName = "Handel & Halvorsen Passacaglia.mid";
       loadMidiFromUrl(defaultMidiUrl, defaultFileName);
     }
-
     function extractNotesFromMidi(midi) {
       notesToPlay = [];
       currentNoteIndex = 0;
@@ -380,7 +365,6 @@
       notesToPlay.sort((a, b) => a.time - b.time);
       console.log("Notas MIDI extraídas:", notesToPlay);
     }
-
     document.getElementById('sampleSongs').addEventListener('change', function() {
       if (this.value) {
         const fileName = this.value;
@@ -388,28 +372,22 @@
         loadMidiFromUrl(url, fileName);
       }
     });
-
     function getRandomColor() {
       return '#' + Math.floor(Math.random() * 16777215).toString(16);
     }
-
     function handlePointerDown(e) {
       if (e.pointerType === "mouse" && e.buttons !== 1) return;
-      
       var rect = e.currentTarget.getBoundingClientRect();
       var y = e.clientY;
       var relativeY = (y - rect.top) / rect.height;
       var effectiveGain = computeEffectiveGain(relativeY);
-      
       var randomColor = getRandomColor();
       document.body.style.backgroundColor = randomColor;
-      
       var dynamicContainer = document.getElementById('dynamicMarkingsContainer');
       var rows = dynamicContainer.children;
       for (var i = 0; i < rows.length; i++) {
         rows[i].style.backgroundColor = 'black';
       }
-      
       var containerRect = dynamicContainer.getBoundingClientRect();
       var relativeYInContainer = (e.clientY - containerRect.top) / containerRect.height;
       var rowIndex = Math.floor(relativeYInContainer * rows.length);
@@ -417,7 +395,6 @@
         rowIndex = 0;
       }
       rows[rowIndex].style.backgroundColor = randomColor;
-      
       var notesArray = [];
       if (notesToPlay.length > 0 && currentNoteIndex < notesToPlay.length) {
         var groupThreshold = 0.001;
@@ -449,7 +426,6 @@
         activeNotes[e.pointerId] = notesArray;
       }
     }
-
     function handlePointerUp(e) {
       if (!pedalOn && activeNotes[e.pointerId]) {
         activeNotes[e.pointerId].forEach(function(noteObj) {
@@ -458,7 +434,6 @@
         delete activeNotes[e.pointerId];
       }
     }
-
     var touchBox = document.getElementById('touchBox');
     if (window.PointerEvent) {
       touchBox.addEventListener('pointerdown', handlePointerDown);
@@ -490,7 +465,6 @@
       });
       touchBox.addEventListener('click', handlePointerDown);
     }
-
     document.addEventListener('click', function() {
       if (audioContext.state === 'suspended') {
         audioContext.resume().then(() => {
@@ -498,7 +472,6 @@
         });
       }
     });
-
     var fullscreenBtn = document.getElementById('fullscreenBtn');
     fullscreenBtn.addEventListener('click', function(e) {
       var elem = document.getElementById('container');
@@ -520,36 +493,28 @@
         fullscreenBtn.textContent = "⛶";
       }
     });
-
     var pedalBtn = document.getElementById('pedalBtn');
     pedalBtn.addEventListener('click', function() {
       pedalOn = !pedalOn;
       pedalBtn.textContent = pedalOn ? "Pedal ON" : "Pedal OFF";
-      if (pedalOn) {
-        pedalBtn.style.backgroundColor = "#90EE90";
-      } else {
-        pedalBtn.style.backgroundColor = "#ADD8E6";
-      }
+      pedalBtn.style.backgroundColor = pedalOn ? "#90EE90" : "#ADD8E6";
       console.log("Pedal:", pedalOn ? "ON" : "OFF");
     });
-
     window.addEventListener('load', loadDefaultMidi);
-    
+
     /**************** FIN MODO NORMAL ****************/
 
     /**************** MODO AR ****************/
-    // Cuando se pulse el botón "START AR", se oculta la UI normal y se inicia la sesión AR.
+    // Al pulsar el botón START AR se oculta la interfaz normal y se muestra el contenedor AR.
     document.getElementById('startARBtn').addEventListener('click', function() {
-      // Ocultar la UI normal
       document.getElementById('container').style.display = 'none';
-      // Mostrar el contenedor AR
       document.getElementById('arContainer').style.display = 'block';
       iniciarAR();
     });
 
-    // Función para inicializar AR usando Three.js y ARButton
+    // Función para inicializar AR con Three.js
     function iniciarAR() {
-      // Se usa un módulo para AR, por lo que se crea un script de módulo dinámicamente.
+      // Creamos un script módulo dinámico para usar importaciones de Three.js y ARButton
       var script = document.createElement('script');
       script.type = 'module';
       script.innerHTML = `
@@ -558,20 +523,27 @@
 
         const arContainer = document.getElementById('arContainer');
         const scene = new THREE.Scene();
-        // Cámara en primera persona
-        const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+        const camera = new THREE.PerspectiveCamera(70, window.innerWidth/window.innerHeight, 0.01, 20);
         const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.xr.enabled = true;
         arContainer.appendChild(renderer.domElement);
 
-        // Crear 6 planos que representen las franjas, dispuestos verticalmente
+        // Creamos el ARButton (usamos el estilo por defecto, pero le ajustamos opacidad para efecto transparente)
+        const arButton = ARButton.createButton(renderer, {
+          requiredFeatures: ['hit-test'],
+          sessionInit: { optionalFeatures: ['local-floor','bounded-floor','hand-tracking'] }
+        });
+        arButton.style.opacity = '0.8';
+        // Se añade al contenedor AR
+        arContainer.appendChild(arButton);
+
+        // Creamos 6 planos (paneles) verticales
         const planes = [];
         const planeWidth = 1.0;
         const planeHeight = 0.15;
         const spacing = 0.05;
         const totalHeight = 6 * planeHeight + 5 * spacing;
-        // Posición inicial para centrar en Y
         let startY = totalHeight / 2 - planeHeight / 2;
         for (let i = 0; i < 6; i++) {
           const geometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
@@ -582,7 +554,30 @@
           planes.push(plane);
         }
 
-        // Añadir un botón para salir del modo AR
+        // Raycaster para detectar intersecciones
+        const raycaster = new THREE.Raycaster();
+        // Variable temporal para calcular la dirección del controlador
+        const tempMatrix = new THREE.Matrix4();
+
+        // Función de selección: se reinician todos los planos a negro y se colorea el intersectado
+        function onSelect() {
+          tempMatrix.identity().extractRotation(controller.matrixWorld);
+          raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
+          raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+          const intersects = raycaster.intersectObjects(planes);
+          planes.forEach(p => p.material.color.set(0x000000));
+          if (intersects.length > 0) {
+            const randomColor = Math.floor(Math.random() * 0xffffff);
+            intersects[0].object.material.color.set(randomColor);
+          }
+        }
+
+        // Añadimos un controlador XR para detectar el evento "select"
+        const controller = renderer.xr.getController(0);
+        controller.addEventListener('select', onSelect);
+        scene.add(controller);
+
+        // Botón para salir de AR: se añade un botón de "EXIT AR" en la parte superior izquierda
         const exitBtn = document.createElement('button');
         exitBtn.textContent = 'EXIT AR';
         exitBtn.style.position = 'absolute';
@@ -593,35 +588,9 @@
         exitBtn.style.zIndex = '999';
         document.body.appendChild(exitBtn);
         exitBtn.addEventListener('click', () => {
-          // Salir de AR y recargar la página para volver al modo normal
           renderer.xr.getSession().end();
           window.location.reload();
         });
-
-        // Raycaster para detectar toques sobre los planos
-        const raycaster = new THREE.Raycaster();
-        const pointer = new THREE.Vector2();
-
-        function onSelect(event) {
-          // Convertir la posición del puntero
-          pointer.x = (event.clientX / window.innerWidth) * 2 - 1;
-          pointer.y = -(event.clientY / window.innerHeight) * 2 + 1;
-          raycaster.setFromCamera(pointer, camera);
-          const intersects = raycaster.intersectObjects(planes);
-          // Reiniciar colores a negro
-          planes.forEach(p => p.material.color.set(0x000000));
-          if (intersects.length > 0) {
-            // Cambiar a un color aleatorio la franja tocada
-            const randomColor = Math.floor(Math.random() * 0xffffff);
-            intersects[0].object.material.color.set(randomColor);
-          }
-        }
-
-        // Eventos para toques en móvil o click en pantalla en AR
-        renderer.domElement.addEventListener('pointerdown', onSelect);
-
-        // Crear el botón AR y añadirlo
-        document.body.appendChild(ARButton.createButton(renderer, { requiredFeatures: ['hit-test'] }));
 
         function animate() {
           renderer.setAnimationLoop(render);
@@ -632,7 +601,7 @@
         animate();
 
         window.addEventListener('resize', () => {
-          camera.aspect = window.innerWidth / window.innerHeight;
+          camera.aspect = window.innerWidth/window.innerHeight;
           camera.updateProjectionMatrix();
           renderer.setSize(window.innerWidth, window.innerHeight);
         });
