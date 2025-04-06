@@ -16,129 +16,17 @@
   <script src="https://cdn.jsdelivr.net/gh/gasman/jasmid@master/midifile.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/soundfont-player@0.12.0/dist/soundfont-player.min.js"></script>
   <style>
-    /* Fondo blanco y bloquea scroll/zoom */
-    body {
-      background-color: #FFFFFF;
-      margin: 0;
-      overflow: hidden;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      transition: background-color 0.3s ease;
-    }
-    /* Contenedor principal centrado con borde negro */
-    #container {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      border: 6px solid black;
-      padding: 30px;
-      background-color: #FFFFFF;
+    /* … estilos existentes … */
+    /* Agregamos un estilo sencillo para el botón del pedal */
+    #pedalBtn {
+      background-color: #ADD8E6;
       color: black;
-      width: 350px;
-      box-sizing: border-box;
-    }
-    h1 {
-      margin: 0 0 20px 0;
-      font-size: 3em;
-      text-align: center;
-    }
-    #copyright {
-      margin-bottom: 20px;
-      margin-top: -20px;
-      font-size: 0.9em;
-      color: blue;
-    }
-    /* Botón de pantalla completa en esquina superior derecha */
-    #fullscreenBtn {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background: rgba(0,0,0,0.5);
-      border: none;
-      color: white;
-      padding: 5px 10px;
-      font-size: 1em;
-      cursor: pointer;
-      z-index: 10;
-    }
-    /* Área de toque: fondo negro, dividido en 6 franjas */
-    #touchBox {
-      width: 100%;
-      height: 400px;
-      background-color: black;
-      display: flex;
-      flex-direction: column;
-      position: relative;
-    }
-    /* Franjas dinámicas: nombres en blanco, sin selección */
-    #dynamicMarkingsContainer {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      user-select: none;
-    }
-    #dynamicMarkingsContainer > div {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-bottom: 1px solid white;
-      font-size: 0.8em;
-      color: white;
-      user-select: none;
-    }
-    #dynamicMarkingsContainer > div:last-child {
-      border-bottom: none;
-    }
-    /* Controles inferiores: mayor separación vertical */
-    #buttons {
-      margin-top: 40px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      width: 100%;
-    }
-    /* Botón de cargar: fondo verde claro, texto negro */
-    #loadButton {
-      background-color: #90EE90;
-      color: black;
-      padding: 10px 20px;
+      padding: 8px 15px;
       font-size: 1em;
       border: none;
       border-radius: 5px;
       cursor: pointer;
-    }
-    /* Ocultar input */
-    #midiFile {
-      display: none;
-    }
-    /* Nombre del archivo en cursiva y negro */
-    #fileName {
-      font-style: italic;
-       margin-top: -10px;
-      color: black;
-    }
-    /* Selector de canciones */
-    #sampleSongsContainer {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 5px;
-      width: 100%;
-    }
-    #sampleSongs {
-      padding: 5px;
-      font-size: 0.8em;
-      border-radius: 5px;
-     
-      margin-bottom: 20px;
-      border: none;
-      text-align: center;
+      margin-top: 10px;
     }
   </style>
 </head>
@@ -185,37 +73,34 @@
           <option value="Satie Gymnopedie n1.mid">Satie - Gymnopedie n1.mid</option>
         </select>
       </div>
+      <!-- Botón para alternar Pedal ON/OFF -->
+      <button id="pedalBtn">Pedal ON</button>
       <div id="fileName"></div>
     </div>
   </div>
 
   <script>
-    // VARIABLES PARA LAS NOTAS MIDI
+    // VARIABLES GLOBALES
     var notesToPlay = [];
     var currentNoteIndex = 0;
+    var pedalOn = true; // Estado del pedal. Si true, se mantiene el comportamiento actual.
+    var activeNotes = {}; // Guardaremos las notas activas cuando el pedal esté apagado
 
     // CONFIGURACIÓN DEL AUDIO
     var audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-    // Creamos dos filtros para "suavizar" el sonido:
-    // Un filtro highpass para eliminar frecuencias muy bajas (por debajo de 200 Hz)
+    // Filtros (igual que antes)
     var highpass = audioContext.createBiquadFilter();
     highpass.type = "highpass";
     highpass.frequency.value = 200;
-
-    // Un filtro lowpass para eliminar frecuencias muy altas (por encima de 1500 Hz)
     var lowpass = audioContext.createBiquadFilter();
     lowpass.type = "lowpass";
     lowpass.frequency.value = 1500;
-
-    // Encadenamos los filtros: highpass -> lowpass -> destino
     highpass.connect(lowpass);
     lowpass.connect(audioContext.destination);
 
-    // Variable para el instrumento
     var pianoInstrument = null;
     if (window.Soundfont && typeof window.Soundfont.instrument === 'function') {
-      // Cargamos el instrumento "acoustic_grand_piano" usando el paquete MusyngKite pre-renderizado
       Soundfont.instrument(audioContext, 'acoustic_grand_piano', { soundfont: 'MusyngKite' })
         .then(function(piano) {
           pianoInstrument = piano;
@@ -228,53 +113,139 @@
       console.error("No se encontró el método instrument en Soundfont.");
     }
 
-    // Configuramos la duración de cada nota: 10 segundos
+    // Duración predeterminada para el modo pedal encendido
     var noteDuration = 3.0;
     var defaultMidiNote = 60; // C4
 
-    // Función para convertir un número MIDI a nota (ej. "C4")
     function midiNoteToNoteName(midi) {
       var octave = Math.floor(midi / 12) - 1;
       var noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
       return noteNames[midi % 12] + octave;
     }
 
-    // Cálculo continuo del gain según la posición vertical
     function computeEffectiveGain(relativeY) {
       var minGain = 0.15;
       var maxGain = 1.0;
       return minGain + (maxGain - minGain) * (1 - relativeY);
     }
 
-    // Función para reproducir una nota con fade out de 2 segundos al final
-    function playPianoNote(gain, midiNote) {
-      if (pianoInstrument) {
-        var noteName = midiNoteToNoteName(midiNote);
-        // Reproducimos la nota con duración de 10 segundos y pasamos el parámetro velocity
-        var source = pianoInstrument.play(noteName, audioContext.currentTime, { 
-          gain: gain, 
-          duration: noteDuration, 
-          velocity: gain * 127 
-        });
-        // Creamos un GainNode para controlar el fade out
-        var noteGain = audioContext.createGain();
-        noteGain.gain.setValueAtTime(gain, audioContext.currentTime);
-        // Desconectamos la salida automática y la redirigimos al GainNode
-        source.disconnect();
-        source.connect(noteGain);
-        // Programamos el fade out: mantenemos el gain constante hasta 8 segundos,
-        // luego se reduce linealmente a 0 a los 10 segundos.
+    // Función modificada para reproducir nota
+    // Si isPedal es true, se usa la duración normal y se programa el fade out.
+    // Si es false, se usa una duración larga (simulando nota sostenida) y se devuelve el GainNode para controlarlo.
+    function playPianoNoteCustom(gain, midiNote, isPedal) {
+      if (!pianoInstrument) {
+        console.warn("El instrumento aún no se ha cargado.");
+        return;
+      }
+      var noteName = midiNoteToNoteName(midiNote);
+      // Si el pedal está apagado, ponemos una duración larga para poder detenerla manualmente.
+      var duration = isPedal ? noteDuration : 60; 
+      var source = pianoInstrument.play(noteName, audioContext.currentTime, { 
+        gain: gain, 
+        duration: duration, 
+        velocity: gain * 127 
+      });
+      var noteGain = audioContext.createGain();
+      noteGain.gain.setValueAtTime(gain, audioContext.currentTime);
+      source.disconnect();
+      source.connect(noteGain);
+      if (isPedal) {
+        // Modo normal: se programa el fade out (por ejemplo, después de 2 segundos se reduce a 0 en 1 segundo)
         noteGain.gain.setValueAtTime(gain, audioContext.currentTime + 2);
         noteGain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 3);
-        // Conectamos el GainNode a la cadena de filtros
-        noteGain.connect(highpass);
-        console.log("Nota reproducida:", noteName, "gain:", gain, "velocity:", gain * 127);
+      }
+      noteGain.connect(highpass);
+      return noteGain; // Se devuelve el objeto para poder detenerlo si es necesario.
+    }
+
+    // Manejador para el botón del pedal
+    document.getElementById('pedalBtn').addEventListener('click', function() {
+      pedalOn = !pedalOn;
+      this.textContent = pedalOn ? "Pedal ON" : "Pedal OFF";
+      console.log("Estado del pedal:", pedalOn ? "ON" : "OFF");
+    });
+
+    // Función para reproducir nota en respuesta al toque
+    // Se usa tanto para eventos pointerdown (inicio del toque) como para click.
+    function handleTouch(e) {
+      var rect = e.currentTarget.getBoundingClientRect();
+      var clientY = (e.touches && e.touches.length > 0) ? e.touches[0].clientY : e.clientY;
+      var relativeY = (clientY - rect.top) / rect.height;
+      var effectiveGain = computeEffectiveGain(relativeY);
+      console.log("relativeY:", relativeY, "effectiveGain:", effectiveGain);
+      document.body.style.backgroundColor = '#' + Math.floor(Math.random() * 16777215).toString(16);
+
+      // Para simplificar, se reproducirá una nota (o grupo de notas) según el código existente.
+      if (notesToPlay.length > 0 && currentNoteIndex < notesToPlay.length) {
+        var groupThreshold = 0.001;
+        var groupEnd = currentNoteIndex + 1;
+        while (groupEnd < notesToPlay.length &&
+               Math.abs(notesToPlay[groupEnd].time - notesToPlay[currentNoteIndex].time) < groupThreshold) {
+          groupEnd++;
+        }
+        // Para cada nota del grupo, se reproduce
+        for (var i = currentNoteIndex; i < groupEnd; i++) {
+          var note = notesToPlay[i];
+          // Usamos el parámetro pedalOn para definir el comportamiento
+          var noteGain = playPianoNoteCustom(effectiveGain, note.noteNumber, pedalOn);
+          // Si el pedal está apagado, guardamos la referencia usando event.pointerId
+          if (!pedalOn && e.pointerId !== undefined) {
+            activeNotes[e.pointerId] = noteGain;
+          }
+        }
+        currentNoteIndex = groupEnd;
+        if (currentNoteIndex >= notesToPlay.length) {
+          currentNoteIndex = 0;
+        }
       } else {
-        console.warn("El instrumento aún no se ha cargado.");
+        // Si no hay notas MIDI, reproducimos una nota por defecto
+        var noteGain = playPianoNoteCustom(effectiveGain, defaultMidiNote, pedalOn);
+        if (!pedalOn && e.pointerId !== undefined) {
+          activeNotes[e.pointerId] = noteGain;
+        }
       }
     }
 
-    // --- Evento para cargar un archivo MIDI desde el input ---
+    // Manejador para detener la nota cuando se levanta el dedo (solo si el pedal está apagado)
+    function handleTouchEnd(e) {
+      if (!pedalOn && e.pointerId !== undefined && activeNotes[e.pointerId]) {
+        var noteGain = activeNotes[e.pointerId];
+        var now = audioContext.currentTime;
+        // Cancelamos cualquier programación anterior y hacemos un fade out rápido (por ejemplo, en 0.1 s)
+        noteGain.gain.cancelScheduledValues(now);
+        noteGain.gain.setValueAtTime(noteGain.gain.value, now);
+        noteGain.gain.linearRampToValueAtTime(0, now + 0.1);
+        // Opcional: desconectar después de un corto retardo
+        setTimeout(function() {
+          noteGain.disconnect();
+        }, 150);
+        // Eliminamos la referencia
+        delete activeNotes[e.pointerId];
+      }
+    }
+
+    // Asignar eventos para pointerdown y pointerup en el área de toque
+    var touchBox = document.getElementById('touchBox');
+    if (window.PointerEvent) {
+      touchBox.addEventListener('pointerdown', handleTouch);
+      touchBox.addEventListener('pointerup', handleTouchEnd);
+      touchBox.addEventListener('pointercancel', handleTouchEnd);
+    } else if ('ontouchstart' in window) {
+      touchBox.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        handleTouch(e);
+      });
+      // En móviles, podrías usar touchend de forma similar
+      touchBox.addEventListener('touchend', function(e) {
+        // Aquí se puede iterar sobre cada touch terminada y actuar
+        // Nota: los eventos touch no incluyen pointerId, por lo que habría que adaptar la estrategia.
+      });
+    } else {
+      touchBox.addEventListener('click', handleTouch);
+    }
+
+    // Resto del código para cargar MIDI, pantalla completa, etc. se mantiene igual
+
     document.getElementById('midiFile').addEventListener('change', function(e) {
       document.getElementById('fileName').textContent = e.target.files[0].name;
       var reader = new FileReader();
@@ -289,7 +260,6 @@
       reader.readAsBinaryString(e.target.files[0]);
     });
 
-    // Función para cargar un archivo MIDI desde una URL
     function loadMidiFromUrl(url, fileName) {
       fetch(url)
         .then(response => response.arrayBuffer())
@@ -309,14 +279,12 @@
         .catch(error => console.error("Error al cargar el MIDI:", error));
     }
 
-    // Cargar el archivo MIDI por defecto usando la URL proporcionada (GitHub raw)
     function loadDefaultMidi() {
       const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/Beethoven Para Elisa.mid";
       const defaultFileName = "Beethoven Para Elisa.mid";
       loadMidiFromUrl(defaultMidiUrl, defaultFileName);
     }
 
-    // Extraer las notas del archivo MIDI
     function extractNotesFromMidi(midi) {
       notesToPlay = [];
       currentNoteIndex = 0;
@@ -339,62 +307,13 @@
       console.log("Notas MIDI extraídas:", notesToPlay);
     }
 
-    // --- Evento para el selector de canciones de muestra ---
     document.getElementById('sampleSongs').addEventListener('change', function() {
       if (this.value) {
         const fileName = this.value;
-        // Usamos la URL base de GitHub raw para los MIDI de muestra
         const url = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/" + encodeURIComponent(fileName);
         loadMidiFromUrl(url, fileName);
       }
     });
-
-    // Función auxiliar para generar un color aleatorio
-    function getRandomColor() {
-      return '#' + Math.floor(Math.random() * 16777215).toString(16);
-    }
-
-    // --- Evento para el cuadro de toque ---
-    function handleTouch(e) {
-      var rect = e.currentTarget.getBoundingClientRect();
-      var y = (e.touches && e.touches.length > 0) ? e.touches[0].clientY : e.clientY;
-      var relativeY = (y - rect.top) / rect.height;
-      var effectiveGain = computeEffectiveGain(relativeY);
-      console.log("relativeY:", relativeY, "effectiveGain:", effectiveGain);
-
-      document.body.style.backgroundColor = getRandomColor();
-
-      if (notesToPlay.length > 0 && currentNoteIndex < notesToPlay.length) {
-        var groupThreshold = 0.001;
-        var groupEnd = currentNoteIndex + 1;
-        while (groupEnd < notesToPlay.length &&
-               Math.abs(notesToPlay[groupEnd].time - notesToPlay[currentNoteIndex].time) < groupThreshold) {
-          groupEnd++;
-        }
-        for (var i = currentNoteIndex; i < groupEnd; i++) {
-          var note = notesToPlay[i];
-          playPianoNote(effectiveGain, note.noteNumber);
-        }
-        currentNoteIndex = groupEnd;
-        if (currentNoteIndex >= notesToPlay.length) {
-          currentNoteIndex = 0;
-        }
-      } else {
-        playPianoNote(effectiveGain, defaultMidiNote);
-      }
-    }
-
-    var touchBox = document.getElementById('touchBox');
-    if (window.PointerEvent) {
-      touchBox.addEventListener('pointerdown', handleTouch);
-    } else if ('ontouchstart' in window) {
-      touchBox.addEventListener('touchstart', function(e) {
-        e.preventDefault();
-        handleTouch(e);
-      });
-    } else {
-      touchBox.addEventListener('click', handleTouch);
-    }
 
     document.addEventListener('click', function() {
       if (audioContext.state === 'suspended') {
@@ -404,7 +323,6 @@
       }
     });
 
-    // Evento para alternar pantalla completa
     var fullscreenBtn = document.getElementById('fullscreenBtn');
     fullscreenBtn.addEventListener('click', function(e) {
       var elem = document.getElementById('container');
