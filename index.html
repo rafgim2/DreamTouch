@@ -407,24 +407,24 @@
       var randomColor = getRandomColor();
       document.body.style.backgroundColor = randomColor;
       
-      // Determinar cuál fila (dentro de #dynamicMarkingsContainer) fue tocada
+      // Obtener el contenedor de las franjas
       var dynamicContainer = document.getElementById('dynamicMarkingsContainer');
+      var rows = dynamicContainer.children;
+      
+      // Reiniciar todas las filas a negro
+      for (var i = 0; i < rows.length; i++) {
+        rows[i].style.backgroundColor = 'black';
+      }
+      
+      // Determinar cuál fila fue tocada según la posición
       var containerRect = dynamicContainer.getBoundingClientRect();
       var relativeYInContainer = (e.clientY - containerRect.top) / containerRect.height;
-      var rows = dynamicContainer.children;
       var rowIndex = Math.floor(relativeYInContainer * rows.length);
-      // Asegurarse de que el índice esté dentro del rango
       if (rowIndex < 0 || rowIndex >= rows.length) {
         rowIndex = 0;
       }
-      var row = rows[rowIndex];
-      
-      // Alternar el color de la fila: si es negro, asignarle el color aleatorio; de lo contrario, restaurarlo a negro.
-      if (!row.style.backgroundColor || row.style.backgroundColor === 'black') {
-        row.style.backgroundColor = randomColor;
-      } else {
-        row.style.backgroundColor = 'black';
-      }
+      // Asignar el color aleatorio a la fila tocada
+      rows[rowIndex].style.backgroundColor = randomColor;
       
       // Reproducir nota(s)
       var notesArray = [];
