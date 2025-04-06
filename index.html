@@ -148,7 +148,7 @@
       border: none;
       text-align: center;
     }
-    /* Botón para iniciar AR (estilo minimalista y casi transparente) */
+    /* Botón para iniciar AR (minimalista, casi transparente) */
     #startARBtn {
       background-color: transparent;
       border: 2px solid rgba(0,0,0,0.5);
@@ -248,19 +248,23 @@
     var noteDuration = 3.0;
     var pedalOn = true;
     var activeNotes = {};
-    function midiNoteToNoteName(midi) {
+
+    // Estas funciones se definen en el ámbito global para que sean accesibles desde el módulo AR.
+    window.midiNoteToNoteName = function(midi) {
       var octave = Math.floor(midi / 12) - 1;
       var noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
       return noteNames[midi % 12] + octave;
-    }
-    function computeEffectiveGain(relativeY) {
+    };
+
+    window.computeEffectiveGain = function(relativeY) {
       var minGain = 0.15;
       var maxGain = 1.0;
       return minGain + (maxGain - minGain) * (1 - relativeY);
-    }
-    function playPianoNote(gain, midiNote) {
+    };
+
+    window.playPianoNote = function(gain, midiNote) {
       if (pianoInstrument) {
-        var noteName = midiNoteToNoteName(midiNote);
+        var noteName = window.midiNoteToNoteName(midiNote);
         var source = pianoInstrument.play(noteName, audioContext.currentTime, { 
           gain: gain, 
           duration: noteDuration, 
@@ -277,10 +281,11 @@
       } else {
         console.warn("El instrumento aún no se ha cargado.");
       }
-    }
-    function playNoteNonPedal(gain, midiNote) {
+    };
+
+    window.playNoteNonPedal = function(gain, midiNote) {
       if (pianoInstrument) {
-        var noteName = midiNoteToNoteName(midiNote);
+        var noteName = window.midiNoteToNoteName(midiNote);
         var source = pianoInstrument.play(noteName, audioContext.currentTime, {
           gain: gain,
           duration: 100,
@@ -307,7 +312,8 @@
       } else {
         console.warn("El instrumento aún no se ha cargado.");
       }
-    }
+    };
+
     document.getElementById('midiFile').addEventListener('change', function(e) {
       document.getElementById('fileName').textContent = e.target.files[0].name;
       var reader = new FileReader();
@@ -321,6 +327,7 @@
       };
       reader.readAsBinaryString(e.target.files[0]);
     });
+
     function loadMidiFromUrl(url, fileName) {
       fetch(url)
         .then(response => response.arrayBuffer())
@@ -339,11 +346,13 @@
         })
         .catch(error => console.error("Error al cargar el MIDI:", error));
     }
+
     function loadDefaultMidi() {
       const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/Handel & Halvorsen Passacaglia.mid";
       const defaultFileName = "Handel & Halvorsen Passacaglia.mid";
       loadMidiFromUrl(defaultMidiUrl, defaultFileName);
     }
+
     function extractNotesFromMidi(midi) {
       notesToPlay = [];
       currentNoteIndex = 0;
@@ -365,6 +374,7 @@
       notesToPlay.sort((a, b) => a.time - b.time);
       console.log("Notas MIDI extraídas:", notesToPlay);
     }
+
     document.getElementById('sampleSongs').addEventListener('change', function() {
       if (this.value) {
         const fileName = this.value;
@@ -372,15 +382,17 @@
         loadMidiFromUrl(url, fileName);
       }
     });
+
     function getRandomColor() {
       return '#' + Math.floor(Math.random() * 16777215).toString(16);
     }
+
     function handlePointerDown(e) {
       if (e.pointerType === "mouse" && e.buttons !== 1) return;
       var rect = e.currentTarget.getBoundingClientRect();
       var y = e.clientY;
       var relativeY = (y - rect.top) / rect.height;
-      var effectiveGain = computeEffectiveGain(relativeY);
+      var effectiveGain = window.computeEffectiveGain(relativeY);
       var randomColor = getRandomColor();
       document.body.style.backgroundColor = randomColor;
       var dynamicContainer = document.getElementById('dynamicMarkingsContainer');
@@ -406,9 +418,9 @@
         for (var i = currentNoteIndex; i < groupEnd; i++) {
           var note = notesToPlay[i];
           if (pedalOn) {
-            playPianoNote(effectiveGain, note.noteNumber);
+            window.playPianoNote(effectiveGain, note.noteNumber);
           } else {
-            notesArray.push(playNoteNonPedal(effectiveGain, note.noteNumber));
+            window.playNoteNonPedal(effectiveGain, note.noteNumber);
           }
         }
         currentNoteIndex = groupEnd;
@@ -417,15 +429,16 @@
         }
       } else {
         if (pedalOn) {
-          playPianoNote(effectiveGain, defaultMidiNote);
+          window.playPianoNote(effectiveGain, defaultMidiNote);
         } else {
-          notesArray.push(playNoteNonPedal(effectiveGain, defaultMidiNote));
+          window.playNoteNonPedal(effectiveGain, defaultMidiNote);
         }
       }
       if (!pedalOn) {
         activeNotes[e.pointerId] = notesArray;
       }
     }
+
     function handlePointerUp(e) {
       if (!pedalOn && activeNotes[e.pointerId]) {
         activeNotes[e.pointerId].forEach(function(noteObj) {
@@ -434,6 +447,7 @@
         delete activeNotes[e.pointerId];
       }
     }
+
     var touchBox = document.getElementById('touchBox');
     if (window.PointerEvent) {
       touchBox.addEventListener('pointerdown', handlePointerDown);
@@ -465,6 +479,7 @@
       });
       touchBox.addEventListener('click', handlePointerDown);
     }
+
     document.addEventListener('click', function() {
       if (audioContext.state === 'suspended') {
         audioContext.resume().then(() => {
@@ -472,6 +487,7 @@
         });
       }
     });
+
     var fullscreenBtn = document.getElementById('fullscreenBtn');
     fullscreenBtn.addEventListener('click', function(e) {
       var elem = document.getElementById('container');
@@ -493,6 +509,7 @@
         fullscreenBtn.textContent = "⛶";
       }
     });
+
     var pedalBtn = document.getElementById('pedalBtn');
     pedalBtn.addEventListener('click', function() {
       pedalOn = !pedalOn;
@@ -529,22 +546,22 @@
         renderer.xr.enabled = true;
         arContainer.appendChild(renderer.domElement);
 
-        // Creamos el ARButton (usamos el estilo por defecto, pero le ajustamos opacidad para efecto transparente)
+        // Crear el ARButton con opacidad ajustada (estilo por defecto)
         const arButton = ARButton.createButton(renderer, {
           requiredFeatures: ['hit-test'],
           sessionInit: { optionalFeatures: ['local-floor','bounded-floor','hand-tracking'] }
         });
         arButton.style.opacity = '0.8';
-        // Se añade al contenedor AR
         arContainer.appendChild(arButton);
 
-        // Creamos 6 planos (paneles) verticales
-        const planes = [];
+        // Crear 6 planos (paneles) verticales.
+        // Constantes para la geometría
         const planeWidth = 1.0;
         const planeHeight = 0.15;
         const spacing = 0.05;
         const totalHeight = 6 * planeHeight + 5 * spacing;
         let startY = totalHeight / 2 - planeHeight / 2;
+        const planes = [];
         for (let i = 0; i < 6; i++) {
           const geometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
           const material = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.DoubleSide });
@@ -554,30 +571,68 @@
           planes.push(plane);
         }
 
-        // Raycaster para detectar intersecciones
+        // Raycaster y variable temporal para la dirección del controlador
         const raycaster = new THREE.Raycaster();
-        // Variable temporal para calcular la dirección del controlador
         const tempMatrix = new THREE.Matrix4();
 
-        // Función de selección: se reinician todos los planos a negro y se colorea el intersectado
+        // Función que se dispara al seleccionar (con controlador o toque en pantalla)
         function onSelect() {
           tempMatrix.identity().extractRotation(controller.matrixWorld);
           raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
           raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
           const intersects = raycaster.intersectObjects(planes);
+          // Reiniciar colores de todos los paneles a negro
           planes.forEach(p => p.material.color.set(0x000000));
           if (intersects.length > 0) {
+            // Asignar color aleatorio al panel tocado
             const randomColor = Math.floor(Math.random() * 0xffffff);
-            intersects[0].object.material.color.set(randomColor);
+            const hit = intersects[0];
+            hit.object.material.color.set(randomColor);
+
+            // Calcular effectiveGain a partir de la posición del impacto en el plano.
+            // Convertimos el punto de intersección a coordenadas locales del plano.
+            let localPoint = hit.object.worldToLocal(hit.point.clone());
+            // Normalizamos: suponiendo que el plano va de -planeHeight/2 a +planeHeight/2.
+            let normalizedY = (localPoint.y + (planeHeight / 2)) / planeHeight;
+            // Usamos la función global definida en window para calcular el gain.
+            let effectiveGain = window.computeEffectiveGain(1 - normalizedY);
+
+            // Disparar el evento de sonido utilizando la misma lógica que en modo normal.
+            if (window.notesToPlay.length > 0 && window.currentNoteIndex < window.notesToPlay.length) {
+              let groupThreshold = 0.001;
+              let groupEnd = window.currentNoteIndex + 1;
+              while (groupEnd < window.notesToPlay.length &&
+                     Math.abs(window.notesToPlay[groupEnd].time - window.notesToPlay[window.currentNoteIndex].time) < groupThreshold) {
+                groupEnd++;
+              }
+              for (let i = window.currentNoteIndex; i < groupEnd; i++) {
+                let note = window.notesToPlay[i];
+                if (window.pedalOn) {
+                  window.playPianoNote(effectiveGain, note.noteNumber);
+                } else {
+                  window.playNoteNonPedal(effectiveGain, note.noteNumber);
+                }
+              }
+              window.currentNoteIndex = groupEnd;
+              if (window.currentNoteIndex >= window.notesToPlay.length) {
+                window.currentNoteIndex = 0;
+              }
+            } else {
+              if (window.pedalOn) {
+                window.playPianoNote(effectiveGain, window.defaultMidiNote);
+              } else {
+                window.playNoteNonPedal(effectiveGain, window.defaultMidiNote);
+              }
+            }
           }
         }
 
-        // Añadimos un controlador XR para detectar el evento "select"
+        // Añadir controlador XR y asociar el evento "select"
         const controller = renderer.xr.getController(0);
         controller.addEventListener('select', onSelect);
         scene.add(controller);
 
-        // Botón para salir de AR: se añade un botón de "EXIT AR" en la parte superior izquierda
+        // Botón para salir de AR: se añade en la parte superior izquierda.
         const exitBtn = document.createElement('button');
         exitBtn.textContent = 'EXIT AR';
         exitBtn.style.position = 'absolute';
