@@ -237,10 +237,8 @@
       console.error("No se encontró el método instrument en Soundfont.");
     }
 
-    // Nota por defecto
+    // Nota por defecto y duración en modo pedal
     var defaultMidiNote = 60; // C4
-
-    // Duración usada en el modo pedal (se programa fade out automático)
     var noteDuration = 3.0;
 
     // Variable que indica si el pedal está activado o no (por defecto apagado)
@@ -267,7 +265,6 @@
     function playPianoNote(gain, midiNote) {
       if (pianoInstrument) {
         var noteName = midiNoteToNoteName(midiNote);
-        // Reproduce la nota con duración programada (fade out incluido)
         var source = pianoInstrument.play(noteName, audioContext.currentTime, { 
           gain: gain, 
           duration: noteDuration, 
@@ -277,7 +274,6 @@
         noteGain.gain.setValueAtTime(gain, audioContext.currentTime);
         source.disconnect();
         source.connect(noteGain);
-        // Programación del fade out: se mantiene gain constante y luego se reduce a 0
         noteGain.gain.setValueAtTime(gain, audioContext.currentTime + 2);
         noteGain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 3);
         noteGain.connect(highpass);
@@ -287,11 +283,10 @@
       }
     }
 
-    // Función para reproducir una nota en modo SIN PEDAL (la nota se mantendrá hasta que se llame a stop)
+    // Función para reproducir una nota en modo SIN PEDAL (se mantiene hasta detenerse)
     function playNoteNonPedal(gain, midiNote) {
       if (pianoInstrument) {
         var noteName = midiNoteToNoteName(midiNote);
-        // Se asigna una duración larga para que la nota no se corte automáticamente
         var source = pianoInstrument.play(noteName, audioContext.currentTime, {
           gain: gain,
           duration: 100, // duración larga
@@ -307,7 +302,6 @@
           source: source,
           gainNode: noteGain,
           stop: function() {
-            // Realiza un fade out rápido en 0.2 segundos y luego detiene la nota
             noteGain.gain.cancelScheduledValues(audioContext.currentTime);
             noteGain.gain.setValueAtTime(noteGain.gain.value, audioContext.currentTime);
             noteGain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.2);
@@ -406,7 +400,6 @@
 
     // Al presionar (pointerdown o touchstart)
     function handlePointerDown(e) {
-      // Para evitar que se dispare más de una vez en multitouch
       if (e.pointerType === "mouse" && e.buttons !== 1) return;
       var rect = e.currentTarget.getBoundingClientRect();
       var y = e.clientY;
@@ -414,7 +407,6 @@
       var effectiveGain = computeEffectiveGain(relativeY);
       document.body.style.backgroundColor = getRandomColor();
 
-      // Se elige la nota MIDI a reproducir (o grupo de notas) según lo cargado en el MIDI
       if (notesToPlay.length > 0 && currentNoteIndex < notesToPlay.length) {
         var groupThreshold = 0.001;
         var groupEnd = currentNoteIndex + 1;
@@ -443,14 +435,15 @@
       }
     }
 
-    // Al levantar el dedo (pointerup/touchend)
+    // Al levantar el dedo (pointerup/touchend) se detienen todas las notas activas
     function handlePointerUp(e) {
       if (!pedalOn) {
-        var noteObj = activeNotes[e.pointerId];
-        if (noteObj) {
-          noteObj.stop();
-          delete activeNotes[e.pointerId];
+        for (var key in activeNotes) {
+          if (activeNotes.hasOwnProperty(key)) {
+            activeNotes[key].stop();
+          }
         }
+        activeNotes = {};
       }
     }
 
@@ -459,10 +452,8 @@
     if (window.PointerEvent) {
       touchBox.addEventListener('pointerdown', handlePointerDown);
       touchBox.addEventListener('pointerup', handlePointerUp);
-      // También manejamos pointercancel para limpiar si se interrumpe el evento
       touchBox.addEventListener('pointercancel', handlePointerUp);
     } else {
-      // Fallback para dispositivos táctiles
       touchBox.addEventListener('touchstart', function(e) {
         e.preventDefault();
         handlePointerDown(e.changedTouches[0]);
@@ -473,7 +464,7 @@
       touchBox.addEventListener('click', handlePointerDown);
     }
 
-    // Reanudar AudioContext en caso de que esté suspendido
+    // Reanudar AudioContext si está suspendido
     document.addEventListener('click', function() {
       if (audioContext.state === 'suspended') {
         audioContext.resume().then(() => {
