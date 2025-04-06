@@ -216,7 +216,7 @@
     }
 
     // Configuramos la duración de cada nota: 10 segundos
-    var noteDuration = 10.0;
+    var noteDuration = 3.0;
     var defaultMidiNote = 60; // C4
 
     // Función para convertir número MIDI a nombre de nota (ej. "C4")
@@ -250,8 +250,8 @@
         source.disconnect();
         source.connect(noteGain);
         // Mantenemos el gain constante hasta los 8 segundos y luego se hace fade out a 0 en 2 segundos (hasta 10 segundos)
-        noteGain.gain.setValueAtTime(gain, audioContext.currentTime + 8);
-        noteGain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 10);
+        noteGain.gain.setValueAtTime(gain, audioContext.currentTime + 2);
+        noteGain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 3);
         // Conectamos la salida del GainNode a la cadena de filtros
         noteGain.connect(highpass);
         console.log("Nota reproducida:", noteName, "gain:", gain, "velocity:", gain * 127);
