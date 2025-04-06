@@ -44,7 +44,6 @@
       color: black;
       width: 350px;
       box-sizing: border-box;
-      transition: all 0.3s ease;
     }
     h1 {
       margin: 0 0 20px 0;
@@ -160,7 +159,6 @@
   </style>
 </head>
 <body>
-  <!-- El botón AR está predefinido en el entorno (por ejemplo, con id="arBtn") -->
   <div id="container">
     <!-- Botón de pantalla completa -->
     <button id="fullscreenBtn">⛶</button>
@@ -244,9 +242,6 @@
     var pedalOn = true;
     // Objeto para almacenar las notas activas en modo SIN PEDAL (clave: id único por toque)
     var activeNotes = {};
-
-    // Variable para modo AR
-    var arMode = false;
 
     // Función para convertir número MIDI a nombre (ej. "C4")
     function midiNoteToNoteName(midi) {
@@ -395,35 +390,9 @@
       return '#' + Math.floor(Math.random() * 16777215).toString(16);
     }
 
-    // Función para alternar la interfaz entre modo normal y AR.
-    function toggleAR() {
-      var container = document.getElementById('container');
-      if (arMode) {
-        // En modo AR: se muestran únicamente las franjas con los nombres,
-        // se ocultan los controles, título, botones de fullscreen, etc.
-        document.getElementById('fullscreenBtn').style.display = "none";
-        document.querySelector('h1').style.display = "none";
-        document.getElementById('copyright').style.display = "none";
-        document.getElementById('buttons').style.display = "none";
-        // Se ajusta el contenedor para ocupar toda la pantalla y fondo transparente
-        container.style.border = "none";
-        container.style.background = "transparent";
-        container.style.width = "100%";
-        container.style.height = "100%";
-      } else {
-        // En modo normal se restauran todos los elementos
-        document.getElementById('fullscreenBtn').style.display = "";
-        document.querySelector('h1').style.display = "";
-        document.getElementById('copyright').style.display = "";
-        document.getElementById('buttons').style.display = "";
-        container.style.border = "6px solid black";
-        container.style.background = "#FFFFFF";
-        container.style.width = "350px";
-        container.style.height = "auto";
-      }
-    }
+    // Manejo de eventos de toque/puntero
 
-    // Manejo de eventos de toque/puntero (para modo normal y AR)
+    // Al presionar (pointerdown o touchstart)
     function handlePointerDown(e) {
       // Evitar múltiples disparos con mouse
       if (e.pointerType === "mouse" && e.buttons !== 1) return;
@@ -434,20 +403,20 @@
       var relativeY = (y - rect.top) / rect.height;
       var effectiveGain = computeEffectiveGain(relativeY);
       
-      // Generar un color aleatorio y asignarlo al fondo (o en AR puede quedar transparente)
+      // Generar un color aleatorio y asignarlo al fondo
       var randomColor = getRandomColor();
-      if (!arMode) {
-        document.body.style.backgroundColor = randomColor;
-      }
+      document.body.style.backgroundColor = randomColor;
       
-      // Obtener el contenedor de las franjas y reiniciar todas a negro
+      // Obtener el contenedor de las franjas
       var dynamicContainer = document.getElementById('dynamicMarkingsContainer');
       var rows = dynamicContainer.children;
+      
+      // Reiniciar todas las filas a negro
       for (var i = 0; i < rows.length; i++) {
         rows[i].style.backgroundColor = 'black';
       }
       
-      // Determinar la fila tocada según la posición
+      // Determinar cuál fila fue tocada según la posición
       var containerRect = dynamicContainer.getBoundingClientRect();
       var relativeYInContainer = (e.clientY - containerRect.top) / containerRect.height;
       var rowIndex = Math.floor(relativeYInContainer * rows.length);
@@ -577,13 +546,6 @@
         pedalBtn.style.backgroundColor = "#ADD8E6"; // Azul claro original
       }
       console.log("Pedal:", pedalOn ? "ON" : "OFF");
-    });
-
-    // Botón AR (predefinido) para alternar modo AR
-    document.getElementById('arBtn').addEventListener('click', function() {
-      arMode = !arMode;
-      toggleAR();
-      console.log("Modo AR:", arMode ? "activado" : "desactivado");
     });
 
     // Cargar MIDI por defecto al iniciar
