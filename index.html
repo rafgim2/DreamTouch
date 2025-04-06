@@ -2,8 +2,8 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <!-- Meta viewport -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <!-- Meta viewport con user-scalable=no para evitar zoom accidental -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>DreamTouch</title>
   <!-- Shim para evitar error de require -->
   <script>
@@ -19,15 +19,13 @@
     /* Fondo blanco */
     body {
       background-color: #FFFFFF;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
       margin: 0;
+      overflow: hidden; /* Se bloqueará el scroll en pantalla completa */
       transition: background-color 0.3s ease;
     }
     /* Contenedor principal centrado con borde amarillo */
     #container {
+      position: relative;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -47,6 +45,19 @@
       margin-bottom: 20px;
       margin-top: -10px;
       font-size: 0.9em;
+    }
+    /* Botón de pantalla completa en esquina superior derecha */
+    #fullscreenBtn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: rgba(0,0,0,0.5);
+      border: none;
+      color: white;
+      padding: 5px 10px;
+      font-size: 1em;
+      cursor: pointer;
+      z-index: 10;
     }
     /* Área de toque: fondo negro, dividido en 6 franjas */
     #touchBox {
@@ -126,11 +137,13 @@
 </head>
 <body>
   <div id="container">
+    <!-- Botón de pantalla completa -->
+    <button id="fullscreenBtn">⛶</button>
     <h1>DreamTouch</h1>
     <div id="copyright">
       <a href="https://www.youtube.com/@rafgim" target="_blank" style="color: inherit; text-decoration: none;">© By Rafael Gimeno</a>
     </div>
-    <!-- Área de toque dividida en 6 franjas dinámicas -->
+    <!-- Área de toque dividida en franjas dinámicas -->
     <div id="touchBox">
       <div id="dynamicMarkingsContainer">
         <div>Fortissimo</div>
@@ -176,19 +189,26 @@
 
     // CONFIGURACIÓN DEL AUDIO
     var audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    
-    // Creamos un filtro de paso bajo para suavizar el timbre del piano
-    var filter = audioContext.createBiquadFilter();
-    filter.type = "lowpass";
-    filter.frequency.value = 1500; // Frecuencia de corte a 1500 Hz
-    filter.Q.value = 1;            // Valor Q (puedes ajustar este valor)
-    // Conectamos el filtro a la salida
-    filter.connect(audioContext.destination);
 
+    // Creamos un filtro highpass para eliminar frecuencias bajas no deseadas (por ejemplo, por debajo de 200 Hz)
+    var highpass = audioContext.createBiquadFilter();
+    highpass.type = "highpass";
+    highpass.frequency.value = 200;
+
+    // Creamos un filtro lowpass para eliminar frecuencias altas (por ejemplo, por encima de 1500 Hz)
+    var lowpass = audioContext.createBiquadFilter();
+    lowpass.type = "lowpass";
+    lowpass.frequency.value = 1500;
+
+    // Encadenamos los filtros: highpass -> lowpass -> destino
+    highpass.connect(lowpass);
+    lowpass.connect(audioContext.destination);
+
+    // Variable para el instrumento
     var pianoInstrument = null;
     if (window.Soundfont && typeof window.Soundfont.instrument === 'function') {
       // Cargamos el piano "acoustic_grand_piano" usando el paquete MusyngKite
-      Soundfont.instrument(audioContext, 'acoustic_grand_piano', { soundfont: 'MusyngKite', destination: filter })
+      Soundfont.instrument(audioContext, 'acoustic_grand_piano', { soundfont: 'MusyngKite', destination: highpass })
         .then(function(piano) {
           pianoInstrument = piano;
           console.log("Instrumento Acoustic Grand Piano (MusyngKite) cargado.");
@@ -211,14 +231,15 @@
       return noteNames[midi % 12] + octave;
     }
 
-    // Cálculo continuo del gain según la posición vertical
+    // Calcula el gain de forma continua según la posición vertical
     function computeEffectiveGain(relativeY) {
       var minGain = 0.15;
       var maxGain = 1.0;
       return minGain + (maxGain - minGain) * (1 - relativeY);
     }
 
-    // Función para reproducir una nota, pasando además "velocity" para seleccionar la muestra adecuada (si el soundfont lo soporta)
+    // Función para reproducir una nota
+    // Se pasa "velocity" calculado a partir del gain para ayudar a seleccionar la muestra adecuada.
     function playPianoNote(gain, midiNote) {
       if (pianoInstrument) {
         var noteName = midiNoteToNoteName(midiNote);
@@ -229,7 +250,7 @@
       }
     }
 
-    // --- EVENTO PARA CARGAR ARCHIVO MIDI ---
+    // --- Evento para cargar archivo MIDI desde input ---
     document.getElementById('midiFile').addEventListener('change', function(e) {
       document.getElementById('fileName').textContent = e.target.files[0].name;
       var reader = new FileReader();
@@ -244,7 +265,7 @@
       reader.readAsBinaryString(e.target.files[0]);
     });
 
-    // Función para cargar un archivo MIDI desde una URL
+    // Función para cargar un archivo MIDI desde URL
     function loadMidiFromUrl(url, fileName) {
       fetch(url)
         .then(response => response.arrayBuffer())
@@ -264,9 +285,9 @@
         .catch(error => console.error("Error al cargar el MIDI:", error));
     }
 
-    // Cargar un MIDI por defecto
+    // Cargar MIDI por defecto
     function loadDefaultMidi() {
-      const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/Beethoven Para Elisa.mid";
+      const defaultMidiUrl = "https://67f1dc5a756bc2e2367627ba--soft-fairy-ff4b6b.netlify.app/Beethoven%20Para%20Elisa.mid";
       const defaultFileName = "Beethoven Para Elisa.mid";
       loadMidiFromUrl(defaultMidiUrl, defaultFileName);
     }
@@ -294,11 +315,11 @@
       console.log("Notas MIDI extraídas:", notesToPlay);
     }
 
-    // --- EVENTO PARA EL SELECTOR DE CANCIONES DE MUESTRA ---
+    // --- Evento para el selector de canciones de muestra ---
     document.getElementById('sampleSongs').addEventListener('change', function() {
       if (this.value) {
         const fileName = this.value;
-        const url = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/" + encodeURIComponent(fileName);
+        const url = "https://67f1dc5a756bc2e2367627ba--soft-fairy-ff4b6b.netlify.app/" + encodeURIComponent(fileName);
         loadMidiFromUrl(url, fileName);
       }
     });
@@ -308,7 +329,7 @@
       return '#' + Math.floor(Math.random() * 16777215).toString(16);
     }
 
-    // --- EVENTO PARA EL CUADRO DE TOQUE ---
+    // --- Evento para el cuadro de toque ---
     function handleTouch(e) {
       var rect = e.currentTarget.getBoundingClientRect();
       var y = (e.touches && e.touches.length > 0) ? e.touches[0].clientY : e.clientY;
@@ -355,6 +376,31 @@
         audioContext.resume().then(() => {
           console.log("AudioContext reanudado");
         });
+      }
+    });
+
+    // --- Fullscreen toggle ---
+    var fullscreenBtn = document.getElementById('fullscreenBtn');
+    fullscreenBtn.addEventListener('click', function(e) {
+      var elem = document.getElementById('container');
+      if (!document.fullscreenElement) {
+        elem.requestFullscreen().then(() => {
+          fullscreenBtn.textContent = "×"; // Indicador de salir de pantalla completa
+        }).catch(err => {
+          console.error("Error al activar pantalla completa:", err);
+        });
+      } else {
+        document.exitFullscreen().then(() => {
+          fullscreenBtn.textContent = "⛶";
+        });
+      }
+      e.stopPropagation();
+    });
+
+    // Actualiza el botón de fullscreen cuando se cambia el estado
+    document.addEventListener('fullscreenchange', function() {
+      if (!document.fullscreenElement) {
+        fullscreenBtn.textContent = "⛶";
       }
     });
 
