@@ -47,7 +47,7 @@
     }
     h1 {
       margin: 0 0 20px 0;
-      font-size: 2.8em;
+      font-size: 2.8em;  /* Tamaño actualizado a 2.8em */
       text-align: center;
     }
     #copyright {
@@ -376,7 +376,7 @@
           }
         });
       });
-      notesToPlay.sort((a, b) => a.time - b.time);
+      // Aumentamos el umbral de agrupación para que toques simultáneos (incluso pesados) se procesen juntos
       console.log("Notas MIDI extraídas:", notesToPlay);
     }
 
@@ -398,12 +398,7 @@
 
     // Al presionar (pointerdown o touchstart)
     function handlePointerDown(e) {
-      // Evitar múltiples disparos con mouse
       if (e.pointerType === "mouse" && e.buttons !== 1) return;
-      // Comentamos estas líneas para evitar problemas con toques rápidos
-      // if (e.target.setPointerCapture) {
-      //   e.target.setPointerCapture(e.pointerId);
-      // }
       var rect = e.currentTarget.getBoundingClientRect();
       var y = e.clientY;
       var relativeY = (y - rect.top) / rect.height;
@@ -411,8 +406,10 @@
       document.body.style.backgroundColor = getRandomColor();
 
       var notesArray = [];
+      // Incrementamos el threshold para agrupar toques simultáneos (por ejemplo, 0.02 en lugar de 0.001)
+      var groupThreshold = 0.02;
+
       if (notesToPlay.length > 0 && currentNoteIndex < notesToPlay.length) {
-        var groupThreshold = 0.001;
         var groupEnd = currentNoteIndex + 1;
         while (groupEnd < notesToPlay.length &&
                Math.abs(notesToPlay[groupEnd].time - notesToPlay[currentNoteIndex].time) < groupThreshold) {
@@ -444,10 +441,6 @@
 
     // Al levantar el dedo (pointerup o touchend)
     function handlePointerUp(e) {
-      // Comentamos estas líneas para evitar problemas con toques rápidos
-      // if (e.target.releasePointerCapture) {
-      //   e.target.releasePointerCapture(e.pointerId);
-      // }
       if (!pedalOn && activeNotes[e.pointerId]) {
         activeNotes[e.pointerId].forEach(function(noteObj) {
           noteObj.stop();
@@ -463,7 +456,6 @@
       touchBox.addEventListener('pointerup', handlePointerUp);
       touchBox.addEventListener('pointercancel', handlePointerUp);
     } else {
-      // Fallback para dispositivos táctiles
       touchBox.addEventListener('touchstart', function(e) {
         e.preventDefault();
         Array.from(e.changedTouches).forEach(function(touch) {
