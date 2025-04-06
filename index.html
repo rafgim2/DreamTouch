@@ -300,9 +300,7 @@
             noteGain.gain.setValueAtTime(noteGain.gain.value, audioContext.currentTime);
             noteGain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.2);
             setTimeout(function(){
-              if (source.stop) {
-                source.stop();
-              }
+              if (source.stop) { source.stop(); }
             }, 250);
           }
         };
@@ -396,6 +394,10 @@
     function handlePointerDown(e) {
       // Evitar múltiples disparos con mouse
       if (e.pointerType === "mouse" && e.buttons !== 1) return;
+      // Si el navegador soporta pointer capture, se asigna al inicio del toque
+      if (e.target.setPointerCapture) {
+        e.target.setPointerCapture(e.pointerId);
+      }
       var rect = e.currentTarget.getBoundingClientRect();
       var y = e.clientY;
       var relativeY = (y - rect.top) / rect.height;
@@ -429,14 +431,17 @@
           notesArray.push(playNoteNonPedal(effectiveGain, defaultMidiNote));
         }
       }
-      // Se asigna al ID único (asegurando que en fallback ya se genera un string único)
       if (!pedalOn) {
         activeNotes[e.pointerId] = notesArray;
       }
     }
 
-    // Al levantar el dedo (pointerup/touchend)
+    // Al levantar el dedo (pointerup o touchend)
     function handlePointerUp(e) {
+      // Si se usó pointer capture, liberarlo
+      if (e.target.releasePointerCapture) {
+        e.target.releasePointerCapture(e.pointerId);
+      }
       if (!pedalOn && activeNotes[e.pointerId]) {
         activeNotes[e.pointerId].forEach(function(noteObj) {
           noteObj.stop();
@@ -445,7 +450,7 @@
       }
     }
 
-    // Asignación de eventos: si el navegador soporta PointerEvent se usan directamente
+    // Asignación de eventos
     var touchBox = document.getElementById('touchBox');
     if (window.PointerEvent) {
       touchBox.addEventListener('pointerdown', handlePointerDown);
@@ -456,12 +461,12 @@
       touchBox.addEventListener('touchstart', function(e) {
         e.preventDefault();
         Array.from(e.changedTouches).forEach(function(touch) {
-          // Generar un ID único para cada toque
           var fakeEvent = {
             clientY: touch.clientY,
             currentTarget: e.currentTarget,
             pointerId: "touch-" + touch.identifier,
-            pointerType: "touch"
+            pointerType: "touch",
+            target: e.target
           };
           handlePointerDown(fakeEvent);
         });
@@ -470,7 +475,8 @@
         Array.from(e.changedTouches).forEach(function(touch) {
           var fakeEvent = {
             pointerId: "touch-" + touch.identifier,
-            pointerType: "touch"
+            pointerType: "touch",
+            target: e.target
           };
           handlePointerUp(fakeEvent);
         });
