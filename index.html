@@ -118,10 +118,10 @@
       border-radius: 5px;
       cursor: pointer;
     }
-    /* Botón del pedal: fondo azul claro, texto blanco; tamaño reducido */
+    /* Botón del pedal: fondo verde claro (activo por defecto), texto negro y tamaño reducido */
     #pedalBtn {
-      background-color: #ADD8E6;
-      color: white;
+      background-color: #90EE90;
+      color: black;
       padding: 5px 10px;
       font-size: 0.9em;
       border: none;
@@ -201,7 +201,7 @@
       </div>
       <div id="fileName"></div>
       <!-- Botón de pedal al final -->
-      <button id="pedalBtn">Pedal OFF</button>
+      <button id="pedalBtn">Pedal ON</button>
     </div>
   </div>
 
@@ -242,8 +242,8 @@
     var defaultMidiNote = 60; // C4
     // Duración usada en modo PEDAL (fade out automático)
     var noteDuration = 3.0;
-    // Bandera que indica si el pedal está activado (por defecto OFF)
-    var pedalOn = false;
+    // Pedal activado por defecto
+    var pedalOn = true;
     // Objeto para almacenar las notas activas en modo SIN PEDAL (clave: id único por toque)
     var activeNotes = {};
 
@@ -527,7 +527,7 @@
     pedalBtn.addEventListener('click', function() {
       pedalOn = !pedalOn;
       pedalBtn.textContent = pedalOn ? "Pedal ON" : "Pedal OFF";
-      // Cambiar el color de fondo cuando esté activado
+      // Cambiar el color de fondo y asegurar que el texto siga siendo negro
       if (pedalOn) {
         pedalBtn.style.backgroundColor = "#90EE90"; // Verde claro
       } else {
