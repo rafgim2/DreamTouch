@@ -5,18 +5,17 @@
   <!-- Meta viewport para evitar zoom accidental -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>DreamTouch AR</title>
-  <!-- Shim para evitar error de require -->
   <script>
     window.require = function() {};
   </script>
-  <!-- Scripts MIDI y soundfont (versión 0.12.0 desde cdn.jsdelivr.net) -->
+  <!-- Scripts MIDI y Soundfont -->
   <script src="https://cdn.jsdelivr.net/npm/webmidiapishim"></script>
   <script src="https://cdn.jsdelivr.net/npm/webmidi@2"></script>
   <script src="https://cdn.jsdelivr.net/gh/gasman/jasmid@master/stream.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/gasman/jasmid@master/midifile.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/soundfont-player@0.12.0/dist/soundfont-player.min.js"></script>
   <style>
-    /* Estilos generales */
+    /* Estilos generales y de la interfaz normal */
     html {
       transform: scale(0.9);
       transform-origin: top center;
@@ -31,7 +30,7 @@
       height: 100vh;
       transition: background-color 0.3s ease;
     }
-    /* MODO NORMAL (interfaz tradicional) */
+    /* Interfaz NORMAL de DreamTouch */
     #container {
       position: relative;
       display: flex;
@@ -67,7 +66,6 @@
       cursor: pointer;
       z-index: 10;
     }
-    /* Área de toque: 6 franjas */
     #touchBox {
       width: 100%;
       height: 400px;
@@ -98,7 +96,6 @@
     #dynamicMarkingsContainer > div:last-child {
       border-bottom: none;
     }
-    /* Controles inferiores */
     #buttons {
       margin-top: 40px;
       display: flex;
@@ -125,9 +122,7 @@
       border-radius: 5px;
       cursor: pointer;
     }
-    #midiFile {
-      display: none;
-    }
+    #midiFile { display: none; }
     #fileName {
       font-style: italic;
       margin-top: -10px;
@@ -148,7 +143,7 @@
       border: none;
       text-align: center;
     }
-    /* Botón para iniciar AR (estilo minimalista y casi transparente) */
+    /* Botón para iniciar AR (minimalista, casi transparente) */
     #startARBtn {
       background-color: transparent;
       border: 2px solid rgba(0,0,0,0.5);
@@ -159,7 +154,7 @@
       cursor: pointer;
       margin-top: 10px;
     }
-    /* Contenedor para el modo AR (inicialmente oculto) */
+    /* Contenedor para modo AR (inicialmente oculto) */
     #arContainer {
       position: absolute;
       top: 0;
@@ -172,14 +167,13 @@
   </style>
 </head>
 <body>
-  <!-- MODO NORMAL -->
+  <!-- Interfaz NORMAL -->
   <div id="container">
     <button id="fullscreenBtn">⛶</button>
     <h1>DreamTouch</h1>
     <div id="copyright">
       <a href="https://www.youtube.com/@rafgim" target="_blank" style="color: inherit; text-decoration: none;">© By Rafael Gimeno</a>
     </div>
-    <!-- Área de toque -->
     <div id="touchBox">
       <div id="dynamicMarkingsContainer">
         <div>Fortissimo</div>
@@ -190,7 +184,6 @@
         <div>Pianissimo</div>
       </div>
     </div>
-    <!-- Controles inferiores -->
     <div id="buttons">
       <label for="midiFile" id="loadButton">
         Cargar Archivo MIDI
@@ -215,11 +208,11 @@
     </div>
   </div>
 
-  <!-- Contenedor para el modo AR -->
+  <!-- Contenedor para modo AR (se muestra al iniciar AR) -->
   <div id="arContainer"></div>
 
   <script>
-    /**************** MODO NORMAL (igual que antes) ****************/
+    /**************** MODO NORMAL ****************/
     var notesToPlay = [];
     var currentNoteIndex = 0;
     var audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -247,28 +240,22 @@
     var defaultMidiNote = 60; // C4
     var noteDuration = 3.0;
     var pedalOn = true;
+    window.handSelectActive = false; // Bandera para evitar disparos continuos
 
-    // Estas funciones se asignan a window para usarlas desde el módulo AR.
+    // Funciones globales para uso en AR
     window.midiNoteToNoteName = function(midi) {
       var octave = Math.floor(midi / 12) - 1;
       var noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
       return noteNames[midi % 12] + octave;
     };
-
     window.computeEffectiveGain = function(relativeY) {
-      var minGain = 0.15;
-      var maxGain = 1.0;
+      var minGain = 0.15, maxGain = 1.0;
       return minGain + (maxGain - minGain) * (1 - relativeY);
     };
-
     window.playPianoNote = function(gain, midiNote) {
       if (pianoInstrument) {
         var noteName = window.midiNoteToNoteName(midiNote);
-        var source = pianoInstrument.play(noteName, audioContext.currentTime, { 
-          gain: gain, 
-          duration: noteDuration, 
-          velocity: gain * 127 
-        });
+        var source = pianoInstrument.play(noteName, audioContext.currentTime, { gain: gain, duration: noteDuration, velocity: gain * 127 });
         var noteGain = audioContext.createGain();
         noteGain.gain.setValueAtTime(gain, audioContext.currentTime);
         source.disconnect();
@@ -281,33 +268,22 @@
         console.warn("El instrumento aún no se ha cargado.");
       }
     };
-
     window.playNoteNonPedal = function(gain, midiNote) {
       if (pianoInstrument) {
         var noteName = window.midiNoteToNoteName(midiNote);
-        var source = pianoInstrument.play(noteName, audioContext.currentTime, {
-          gain: gain,
-          duration: 100,
-          velocity: gain * 127
-        });
+        var source = pianoInstrument.play(noteName, audioContext.currentTime, { gain: gain, duration: 100, velocity: gain * 127 });
         var noteGain = audioContext.createGain();
         noteGain.gain.setValueAtTime(gain, audioContext.currentTime);
         source.disconnect();
         source.connect(noteGain);
         noteGain.connect(highpass);
         console.log("Nota reproducida (SIN PEDAL):", noteName, "gain:", gain);
-        return {
-          source: source,
-          gainNode: noteGain,
-          stop: function() {
-            noteGain.gain.cancelScheduledValues(audioContext.currentTime);
-            noteGain.gain.setValueAtTime(noteGain.gain.value, audioContext.currentTime);
-            noteGain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.2);
-            setTimeout(function(){
-              if (source.stop) { source.stop(); }
-            }, 250);
-          }
-        };
+        return { source: source, gainNode: noteGain, stop: function() {
+          noteGain.gain.cancelScheduledValues(audioContext.currentTime);
+          noteGain.gain.setValueAtTime(noteGain.gain.value, audioContext.currentTime);
+          noteGain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.2);
+          setTimeout(function(){ if (source.stop) { source.stop(); } }, 250);
+        }};
       } else {
         console.warn("El instrumento aún no se ha cargado.");
       }
@@ -345,13 +321,11 @@
         })
         .catch(error => console.error("Error al cargar el MIDI:", error));
     }
-
     function loadDefaultMidi() {
-      const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/Handel & Halvorsen Passacaglia.mid";
+      const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/Handel%20&%20Halvorsen%20Passacaglia.mid";
       const defaultFileName = "Handel & Halvorsen Passacaglia.mid";
       loadMidiFromUrl(defaultMidiUrl, defaultFileName);
     }
-
     function extractNotesFromMidi(midi) {
       notesToPlay = [];
       currentNoteIndex = 0;
@@ -359,21 +333,15 @@
       midi.tracks.forEach(track => {
         absoluteTime = 0;
         track.forEach(event => {
-          if (event.deltaTime) {
-            absoluteTime += event.deltaTime;
-          }
+          if (event.deltaTime) { absoluteTime += event.deltaTime; }
           if (event.subtype === 'noteOn') {
-            notesToPlay.push({
-              noteNumber: event.noteNumber,
-              time: absoluteTime
-            });
+            notesToPlay.push({ noteNumber: event.noteNumber, time: absoluteTime });
           }
         });
       });
       notesToPlay.sort((a, b) => a.time - b.time);
       console.log("Notas MIDI extraídas:", notesToPlay);
     }
-
     document.getElementById('sampleSongs').addEventListener('change', function() {
       if (this.value) {
         const fileName = this.value;
@@ -381,11 +349,9 @@
         loadMidiFromUrl(url, fileName);
       }
     });
-
     function getRandomColor() {
       return '#' + Math.floor(Math.random() * 16777215).toString(16);
     }
-
     function handlePointerDown(e) {
       if (e.pointerType === "mouse" && e.buttons !== 1) return;
       var rect = e.currentTarget.getBoundingClientRect();
@@ -396,48 +362,30 @@
       document.body.style.backgroundColor = randomColor;
       var dynamicContainer = document.getElementById('dynamicMarkingsContainer');
       var rows = dynamicContainer.children;
-      for (var i = 0; i < rows.length; i++) {
-        rows[i].style.backgroundColor = 'black';
-      }
+      for (var i = 0; i < rows.length; i++) { rows[i].style.backgroundColor = 'black'; }
       var containerRect = dynamicContainer.getBoundingClientRect();
       var relativeYInContainer = (e.clientY - containerRect.top) / containerRect.height;
       var rowIndex = Math.floor(relativeYInContainer * rows.length);
-      if (rowIndex < 0 || rowIndex >= rows.length) {
-        rowIndex = 0;
-      }
+      if (rowIndex < 0 || rowIndex >= rows.length) { rowIndex = 0; }
       rows[rowIndex].style.backgroundColor = randomColor;
       if (notesToPlay.length > 0 && currentNoteIndex < notesToPlay.length) {
         var groupThreshold = 0.001;
         var groupEnd = currentNoteIndex + 1;
         while (groupEnd < notesToPlay.length &&
-               Math.abs(notesToPlay[groupEnd].time - notesToPlay[currentNoteIndex].time) < groupThreshold) {
-          groupEnd++;
-        }
+               Math.abs(notesToPlay[groupEnd].time - notesToPlay[currentNoteIndex].time) < groupThreshold) { groupEnd++; }
         for (var i = currentNoteIndex; i < groupEnd; i++) {
           var note = notesToPlay[i];
-          if (pedalOn) {
-            window.playPianoNote(effectiveGain, note.noteNumber);
-          } else {
-            window.playNoteNonPedal(effectiveGain, note.noteNumber);
-          }
+          if (pedalOn) { window.playPianoNote(effectiveGain, note.noteNumber); }
+          else { window.playNoteNonPedal(effectiveGain, note.noteNumber); }
         }
         currentNoteIndex = groupEnd;
-        if (currentNoteIndex >= notesToPlay.length) {
-          currentNoteIndex = 0;
-        }
+        if (currentNoteIndex >= notesToPlay.length) { currentNoteIndex = 0; }
       } else {
-        if (pedalOn) {
-          window.playPianoNote(effectiveGain, defaultMidiNote);
-        } else {
-          window.playNoteNonPedal(effectiveGain, defaultMidiNote);
-        }
+        if (pedalOn) { window.playPianoNote(effectiveGain, defaultMidiNote); }
+        else { window.playNoteNonPedal(effectiveGain, defaultMidiNote); }
       }
     }
-
-    function handlePointerUp(e) {
-      // Para modo SIN PEDAL, si fuese necesario
-    }
-
+    function handlePointerUp(e) { }
     var touchBox = document.getElementById('touchBox');
     if (window.PointerEvent) {
       touchBox.addEventListener('pointerdown', handlePointerDown);
@@ -459,47 +407,31 @@
       });
       touchBox.addEventListener('touchend', function(e) {
         Array.from(e.changedTouches).forEach(function(touch) {
-          var fakeEvent = {
-            pointerId: "touch-" + touch.identifier,
-            pointerType: "touch",
-            target: e.target
-          };
+          var fakeEvent = { pointerId: "touch-" + touch.identifier, pointerType: "touch", target: e.target };
           handlePointerUp(fakeEvent);
         });
       });
       touchBox.addEventListener('click', handlePointerDown);
     }
-
     document.addEventListener('click', function() {
       if (audioContext.state === 'suspended') {
-        audioContext.resume().then(() => {
-          console.log("AudioContext reanudado");
-        });
+        audioContext.resume().then(() => { console.log("AudioContext reanudado"); });
       }
     });
-
     var fullscreenBtn = document.getElementById('fullscreenBtn');
     fullscreenBtn.addEventListener('click', function(e) {
       var elem = document.getElementById('container');
       if (!document.fullscreenElement) {
-        elem.requestFullscreen().then(() => {
-          fullscreenBtn.textContent = "×";
-        }).catch(err => {
-          console.error("Error al activar pantalla completa:", err);
-        });
+        elem.requestFullscreen().then(() => { fullscreenBtn.textContent = "×"; })
+          .catch(err => { console.error("Error al activar pantalla completa:", err); });
       } else {
-        document.exitFullscreen().then(() => {
-          fullscreenBtn.textContent = "⛶";
-        });
+        document.exitFullscreen().then(() => { fullscreenBtn.textContent = "⛶"; });
       }
       e.stopPropagation();
     });
     document.addEventListener('fullscreenchange', function() {
-      if (!document.fullscreenElement) {
-        fullscreenBtn.textContent = "⛶";
-      }
+      if (!document.fullscreenElement) { fullscreenBtn.textContent = "⛶"; }
     });
-
     var pedalBtn = document.getElementById('pedalBtn');
     pedalBtn.addEventListener('click', function() {
       pedalOn = !pedalOn;
@@ -512,17 +444,14 @@
     /**************** FIN MODO NORMAL ****************/
 
     /**************** MODO AR ****************/
-    // Al pulsar el botón START AR se oculta la interfaz normal y se muestra el contenedor AR.
+    // Al pulsar START AR, ocultamos la interfaz normal y mostramos el contenedor AR.
     document.getElementById('startARBtn').addEventListener('click', function() {
       document.getElementById('container').style.display = 'none';
       document.getElementById('arContainer').style.display = 'block';
       iniciarAR();
     });
 
-    // Bandera para evitar disparos continuos con hand tracking.
-    window.handSelectActive = false;
-
-    // Función para inicializar AR con Three.js y detección de colisiones con la mano completa.
+    // Función para inicializar AR con detección de colisiones usando toda la mano
     function iniciarAR() {
       var script = document.createElement('script');
       script.type = 'module';
@@ -538,15 +467,24 @@
         renderer.xr.enabled = true;
         arContainer.appendChild(renderer.domElement);
 
-        // Crear ARButton (con opacidad ajustada)
+        // Crear y reubicar ARButton (se elimina cualquier botón previo)
         const arButton = ARButton.createButton(renderer, {
           requiredFeatures: ['hit-test'],
           sessionInit: { optionalFeatures: ['local-floor','bounded-floor','hand-tracking'] }
         });
         arButton.style.opacity = '0.8';
+        // Reubicar el botón: lo posicionamos en la parte inferior central
+        arButton.style.position = 'absolute';
+        arButton.style.bottom = '20px';
+        arButton.style.left = '50%';
+        arButton.style.transform = 'translateX(-50%)';
+        // Asegurarse de que solo aparezca este botón
+        if (arButton.parentNode) {
+          arButton.parentNode.removeChild(arButton);
+        }
         arContainer.appendChild(arButton);
 
-        // Configurar paneles AR: baseY se ha ajustado a 0.4 para colocarlos más arriba.
+        // Configurar paneles AR: se posicionan con baseY = 0.4 y z = -0.8.
         const numPanels = 6;
         const planeWidth = 1.0;
         const planeHeight = 0.15;
@@ -564,103 +502,72 @@
           planes.push(plane);
         }
 
-        // Umbral para detección de colisión (en coordenadas locales del panel)
-        const collisionThreshold = 0.1;
-
-        // Función para disparar el evento de selección para un panel.
-        function triggerPanelSelect(panel) {
-          if (!window.handSelectActive) {
-            window.handSelectActive = true;
-            planes.forEach(p => p.material.color.set(0x000000));
-            const panelIndex = panel.userData.index;
-            const maxGain = 1.0;
-            const minGain = 0.15;
-            const effectiveGain = minGain + (maxGain - minGain) * ((numPanels - 1 - panelIndex) / (numPanels - 1));
-            const randomColor = Math.floor(Math.random() * 0xffffff);
-            panel.material.color.set(randomColor);
-            if (window.notesToPlay.length > 0 && window.currentNoteIndex < window.notesToPlay.length) {
-              let groupThreshold = 0.001;
-              let groupEnd = window.currentNoteIndex + 1;
-              while (groupEnd < window.notesToPlay.length &&
-                     Math.abs(window.notesToPlay[groupEnd].time - window.notesToPlay[window.currentNoteIndex].time) < groupThreshold) {
-                groupEnd++;
-              }
-              for (let i = window.currentNoteIndex; i < groupEnd; i++) {
-                let note = window.notesToPlay[i];
-                if (window.pedalOn) {
-                  window.playPianoNote(effectiveGain, note.noteNumber);
-                } else {
-                  window.playNoteNonPedal(effectiveGain, note.noteNumber);
+        // En cada frame usaremos xrFrame para obtener inputSources con hand tracking.
+        renderer.setAnimationLoop((timestamp, xrFrame) => {
+          // Si hay sesión activa, revisar inputSources.
+          const session = renderer.xr.getSession();
+          if (session && xrFrame) {
+            for (const inputSource of session.inputSources) {
+              if (inputSource.hand) {
+                // Recorrer todos los joints de la mano.
+                for (const joint of Object.values(inputSource.hand)) {
+                  // Obtener la posición mundial del joint.
+                  if (joint.visible) {
+                    const jointPos = new THREE.Vector3();
+                    joint.getWorldPosition(jointPos);
+                    // Revisar colisión contra cada panel:
+                    for (const panel of planes) {
+                      const localPos = panel.worldToLocal(jointPos.clone());
+                      if (Math.abs(localPos.x) <= planeWidth/2 &&
+                          Math.abs(localPos.y) <= planeHeight/2 &&
+                          Math.abs(localPos.z) < 0.1) {
+                        if (!window.handSelectActive) {
+                          window.handSelectActive = true;
+                          planes.forEach(p => p.material.color.set(0x000000));
+                          const panelIndex = panel.userData.index;
+                          const maxGain = 1.0, minGain = 0.15;
+                          const effectiveGain = minGain + (maxGain - minGain) * ((numPanels - 1 - panelIndex) / (numPanels - 1));
+                          const randomColor = Math.floor(Math.random() * 0xffffff);
+                          panel.material.color.set(randomColor);
+                          if (window.notesToPlay.length > 0 && window.currentNoteIndex < window.notesToPlay.length) {
+                            let groupThreshold = 0.001;
+                            let groupEnd = window.currentNoteIndex + 1;
+                            while (groupEnd < window.notesToPlay.length &&
+                                   Math.abs(window.notesToPlay[groupEnd].time - window.notesToPlay[window.currentNoteIndex].time) < groupThreshold) {
+                              groupEnd++;
+                            }
+                            for (let i = window.currentNoteIndex; i < groupEnd; i++) {
+                              let note = window.notesToPlay[i];
+                              if (window.pedalOn) {
+                                window.playPianoNote(effectiveGain, note.noteNumber);
+                              } else {
+                                window.playNoteNonPedal(effectiveGain, note.noteNumber);
+                              }
+                            }
+                            window.currentNoteIndex = groupEnd;
+                            if (window.currentNoteIndex >= window.notesToPlay.length) {
+                              window.currentNoteIndex = 0;
+                            }
+                          } else {
+                            if (window.pedalOn) {
+                              window.playPianoNote(effectiveGain, window.defaultMidiNote);
+                            } else {
+                              window.playNoteNonPedal(effectiveGain, window.defaultMidiNote);
+                            }
+                          }
+                        }
+                        break;
+                      }
+                    }
+                  }
                 }
-              }
-              window.currentNoteIndex = groupEnd;
-              if (window.currentNoteIndex >= window.notesToPlay.length) {
-                window.currentNoteIndex = 0;
-              }
-            } else {
-              if (window.pedalOn) {
-                window.playPianoNote(effectiveGain, window.defaultMidiNote);
               } else {
-                window.playNoteNonPedal(effectiveGain, window.defaultMidiNote);
+                window.handSelectActive = false;
               }
             }
-          }
-        }
-
-        // Función para revisar colisiones usando todos los joints de la mano.
-        function checkHandCollisions(hand) {
-          let collisionFound = false;
-          for (const joint of Object.values(hand.joints)) {
-            if (joint.visible) {
-              const jointPos = new THREE.Vector3();
-              joint.getWorldPosition(jointPos);
-              // Revisar colisión contra cada panel
-              for (const panel of planes) {
-                const localPos = panel.worldToLocal(jointPos.clone());
-                if (Math.abs(localPos.x) <= planeWidth/2 &&
-                    Math.abs(localPos.y) <= planeHeight/2 &&
-                    Math.abs(localPos.z) < collisionThreshold) {
-                  collisionFound = true;
-                  triggerPanelSelect(panel);
-                  break;
-                }
-              }
-              if (collisionFound) break;
-            }
-          }
-          if (!collisionFound) {
-            window.handSelectActive = false;
-          }
-        }
-
-        // Añadir controlador XR para dispositivos con controlador (opcional).
-        const controller = renderer.xr.getController(0);
-        controller.addEventListener('select', () => {
-          const tempMatrix = new THREE.Matrix4();
-          tempMatrix.identity().extractRotation(controller.matrixWorld);
-          const raycaster = new THREE.Raycaster();
-          raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
-          raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
-          const intersects = raycaster.intersectObjects(planes);
-          planes.forEach(p => p.material.color.set(0x000000));
-          if (intersects.length > 0) {
-            triggerPanelSelect(intersects[0].object);
-          }
-        });
-        scene.add(controller);
-
-        // Añadir objeto hand para hand tracking.
-        const hand = renderer.xr.getHand(0);
-        scene.add(hand);
-
-        // En cada frame, revisar colisiones de la mano.
-        renderer.setAnimationLoop(() => {
-          if (hand) {
-            checkHandCollisions(hand);
           }
           renderer.render(scene, camera);
         });
-
         window.addEventListener('resize', () => {
           camera.aspect = window.innerWidth/window.innerHeight;
           camera.updateProjectionMatrix();
