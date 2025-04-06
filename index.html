@@ -8,7 +8,6 @@
   <!-- Shim para require -->
   <script>
     window.require = function() {};
-    // Se ha eliminado la línea que asignaba defaultSoundfont porque window.Soundfont aún no estaba definido.
   </script>
   <!-- Scripts MIDI y soundfont -->
   <script src="https://cdn.jsdelivr.net/npm/webmidiapishim"></script>
@@ -182,7 +181,7 @@
       window.Soundfont.instrument(
         audioContext,
         'https://67f1dc5a756bc2e2367627ba--soft-fairy-ff4b6b.netlify.app/GeneralUser%20GS%20XG%20v1.471.sf2',
-        { format: 'sf2', custom: true, disableFallback: true, soundfont: 'custom' }
+        { format: 'sf2', custom: true, disableFallback: true, soundfont: 'custom', baseUrl: '' }
       ).then(function(piano) {
           pianoInstrument = piano;
           console.log("Instrumento SF2 cargado.");
@@ -260,7 +259,7 @@
 
     // Cargar MIDI por defecto
     function loadDefaultMidi() {
-      const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/Beethoven Para Elisa.mid";
+      const defaultMidiUrl = "https://67f1dc5a756bc2e2367627ba--soft-fairy-ff4b6b.netlify.app/Beethoven%20Para%20Elisa.mid";
       const defaultFileName = "Beethoven Para Elisa.mid";
       loadMidiFromUrl(defaultMidiUrl, defaultFileName);
     }
