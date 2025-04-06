@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <!-- Meta viewport con user-scalable=no para evitar zoom accidental -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>DreamTouch - Modo Normal y AR</title>
+  <title>DreamTouch</title>
   <!-- Shim para evitar error de require -->
   <script>
     window.require = function() {};
@@ -15,26 +15,24 @@
   <script src="https://cdn.jsdelivr.net/gh/gasman/jasmid@master/stream.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/gasman/jasmid@master/midifile.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/soundfont-player@0.12.0/dist/soundfont-player.min.js"></script>
-  <!-- A-Frame para AR -->
-  <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-  <!-- (Opcional) hand-controls para AR, si el dispositivo lo soporta -->
-  <script src="https://cdn.jsdelivr.net/npm/aframe-hand-controls@4.0.1/dist/aframe-hand-controls.min.js"></script>
   <style>
-    /* Estilos para el modo normal */
+    /* Aplicar zoom out a toda la página */
     html {
       transform: scale(0.9);
       transform-origin: top center;
     }
+    /* Fondo blanco y bloquea scroll/zoom */
     body {
       background-color: #FFFFFF;
       margin: 0;
       overflow: hidden;
       display: flex;
-      flex-direction: column;
+      justify-content: center;
       align-items: center;
       height: 100vh;
       transition: background-color 0.3s ease;
     }
+    /* Contenedor principal centrado con borde negro */
     #container {
       position: relative;
       display: flex;
@@ -46,6 +44,7 @@
       color: black;
       width: 350px;
       box-sizing: border-box;
+      transition: all 0.3s ease;
     }
     h1 {
       margin: 0 0 20px 0;
@@ -58,10 +57,11 @@
       font-size: 0.9em;
       color: blue;
     }
-    /* Botones de pantalla completa y cambio de modo */
-    #fullscreenBtn, #modeBtn {
+    /* Botón de pantalla completa en esquina superior derecha */
+    #fullscreenBtn {
       position: absolute;
       top: 10px;
+      right: 10px;
       background: rgba(0,0,0,0.5);
       border: none;
       color: white;
@@ -70,9 +70,7 @@
       cursor: pointer;
       z-index: 10;
     }
-    #fullscreenBtn { right: 10px; }
-    #modeBtn { left: 10px; }
-    /* Área de toque (modo normal) */
+    /* Área de toque: fondo negro, dividido en 6 franjas */
     #touchBox {
       width: 100%;
       height: 400px;
@@ -81,7 +79,7 @@
       flex-direction: column;
       position: relative;
     }
-    /* Franjas dinámicas */
+    /* Franjas dinámicas: nombres en blanco, sin selección */
     #dynamicMarkingsContainer {
       width: 100%;
       height: 100%;
@@ -97,14 +95,14 @@
       border-bottom: 1px solid white;
       font-size: 0.8em;
       color: white;
+      user-select: none;
       background-color: black;
       transition: background-color 0.3s ease;
-      user-select: none;
     }
     #dynamicMarkingsContainer > div:last-child {
       border-bottom: none;
     }
-    /* Controles inferiores */
+    /* Controles inferiores: mayor separación vertical */
     #buttons {
       margin-top: 40px;
       display: flex;
@@ -113,6 +111,7 @@
       gap: 10px;
       width: 100%;
     }
+    /* Botón de cargar: fondo verde claro, texto negro */
     #loadButton {
       background-color: #90EE90;
       color: black;
@@ -122,6 +121,7 @@
       border-radius: 5px;
       cursor: pointer;
     }
+    /* Botón del pedal: fondo verde claro (activo por defecto), texto negro y tamaño reducido */
     #pedalBtn {
       background-color: #90EE90;
       color: black;
@@ -131,12 +131,17 @@
       border-radius: 5px;
       cursor: pointer;
     }
-    #midiFile { display: none; }
+    /* Ocultar input */
+    #midiFile {
+      display: none;
+    }
+    /* Nombre del archivo en cursiva y negro */
     #fileName {
       font-style: italic;
       margin-top: -10px;
       color: black;
     }
+    /* Selector de canciones */
     #sampleSongsContainer {
       display: flex;
       flex-direction: column;
@@ -152,18 +157,10 @@
       border: none;
       text-align: center;
     }
-    /* AR Scene: se oculta en modo normal */
-    #arContainer {
-      display: none;
-      width: 100%;
-      height: 100vh;
-    }
   </style>
 </head>
 <body>
-  <!-- Botón para cambiar de modo (Normal / AR) -->
-  <button id="modeBtn">Modo AR</button>
-  <!-- Modo normal -->
+  <!-- El botón AR está predefinido en el entorno (por ejemplo, con id="arBtn") -->
   <div id="container">
     <!-- Botón de pantalla completa -->
     <button id="fullscreenBtn">⛶</button>
@@ -201,51 +198,20 @@
         </select>
       </div>
       <div id="fileName"></div>
-      <!-- Botón de Pedal -->
+      <!-- Botón de pedal al final -->
       <button id="pedalBtn">Pedal ON</button>
     </div>
   </div>
 
-  <!-- Modo AR -->
-  <div id="arContainer">
-    <a-scene embedded xrweb="mode: ar;" vr-mode-ui="enabled: false" renderer="alpha: true">
-      <!-- Cámara con cursor (para simular interacción) -->
-      <a-entity id="camera" camera look-controls position="0 1.6 0">
-        <a-cursor fuse="true" timeout="500"></a-cursor>
-      </a-entity>
-      <!-- Contenedor de franjas AR -->
-      <a-entity id="arStripes" position="0 1.5 -2">
-        <!-- Se crean 6 planos (filas) con nombres de matices -->
-        <a-plane class="stripe" data-index="0" position="0 1.0 0" rotation="0 0 0" 
-                 width="1.5" height="0.3" color="black"
-                 text="value: Fortissimo; align: center; color: white; width: 4;"></a-plane>
-        <a-plane class="stripe" data-index="1" position="0 0.7 0" rotation="0 0 0" 
-                 width="1.5" height="0.3" color="black"
-                 text="value: Forte; align: center; color: white; width: 4;"></a-plane>
-        <a-plane class="stripe" data-index="2" position="0 0.4 0" rotation="0 0 0" 
-                 width="1.5" height="0.3" color="black"
-                 text="value: Mezzo-forte; align: center; color: white; width: 4;"></a-plane>
-        <a-plane class="stripe" data-index="3" position="0 0.1 0" rotation="0 0 0" 
-                 width="1.5" height="0.3" color="black"
-                 text="value: Mezzo-piano; align: center; color: white; width: 4;"></a-plane>
-        <a-plane class="stripe" data-index="4" position="0 -0.2 0" rotation="0 0 0" 
-                 width="1.5" height="0.3" color="black"
-                 text="value: Piano; align: center; color: white; width: 4;"></a-plane>
-        <a-plane class="stripe" data-index="5" position="0 -0.5 0" rotation="0 0 0" 
-                 width="1.5" height="0.3" color="black"
-                 text="value: Pianissimo; align: center; color: white; width: 4;"></a-plane>
-      </a-entity>
-      <!-- (Opcional) Entidades para hand tracking, si están disponibles -->
-      <a-entity hand-controls="hand: left"></a-entity>
-      <a-entity hand-controls="hand: right"></a-entity>
-    </a-scene>
-  </div>
-
   <script>
-    // VARIABLES MIDI Y AUDIO (comunes para ambos modos)
+    // VARIABLES PARA LAS NOTAS MIDI
     var notesToPlay = [];
     var currentNoteIndex = 0;
+
+    // CONFIGURACIÓN DEL AUDIO
     var audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+    // Filtros para suavizar el sonido:
     var highpass = audioContext.createBiquadFilter();
     highpass.type = "highpass";
     highpass.frequency.value = 200;
@@ -254,6 +220,8 @@
     lowpass.frequency.value = 1500;
     highpass.connect(lowpass);
     lowpass.connect(audioContext.destination);
+
+    // Variable para el instrumento
     var pianoInstrument = null;
     if (window.Soundfont && typeof window.Soundfont.instrument === 'function') {
       Soundfont.instrument(audioContext, 'acoustic_grand_piano', { soundfont: 'MusyngKite' })
@@ -267,29 +235,34 @@
     } else {
       console.error("No se encontró el método instrument en Soundfont.");
     }
+
+    // Nota por defecto
     var defaultMidiNote = 60; // C4
+    // Duración usada en modo PEDAL (fade out automático)
     var noteDuration = 3.0;
+    // Pedal activado por defecto
     var pedalOn = true;
+    // Objeto para almacenar las notas activas en modo SIN PEDAL (clave: id único por toque)
     var activeNotes = {};
 
-    // Función para convertir número MIDI a nota (ej. "C4")
+    // Variable para modo AR
+    var arMode = false;
+
+    // Función para convertir número MIDI a nombre (ej. "C4")
     function midiNoteToNoteName(midi) {
       var octave = Math.floor(midi / 12) - 1;
       var noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
       return noteNames[midi % 12] + octave;
     }
+
+    // Cálculo del gain según posición vertical
     function computeEffectiveGain(relativeY) {
       var minGain = 0.15;
       var maxGain = 1.0;
       return minGain + (maxGain - minGain) * (1 - relativeY);
     }
-    // Para AR: calcular gain según el índice de la fila (0 = Fortissimo, 5 = Pianissimo)
-    function computeGainFromRow(rowIndex, totalRows) {
-      // Asignamos: 0 => 1.0, 5 => 0.15, interpolando linealmente
-      var minGain = 0.15, maxGain = 1.0;
-      return maxGain - (rowIndex/(totalRows - 1))*(maxGain - minGain);
-    }
-    // Reproducción de nota en modo pedal (se puede adaptar para SIN PEDAL)
+
+    // Reproducción en modo PEDAL ON (comportamiento original)
     function playPianoNote(gain, midiNote) {
       if (pianoInstrument) {
         var noteName = midiNoteToNoteName(midiNote);
@@ -305,43 +278,236 @@
         noteGain.gain.setValueAtTime(gain, audioContext.currentTime + 2);
         noteGain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 3);
         noteGain.connect(highpass);
-        console.log("Nota reproducida:", noteName, "gain:", gain);
+        console.log("Nota reproducida (PEDAL ON):", noteName, "gain:", gain);
       } else {
         console.warn("El instrumento aún no se ha cargado.");
       }
     }
 
-    // EVENTOS MODO NORMAL (touchBox)
+    // Reproducción en modo SIN PEDAL: la nota se mantiene hasta detenerse manualmente
+    function playNoteNonPedal(gain, midiNote) {
+      if (pianoInstrument) {
+        var noteName = midiNoteToNoteName(midiNote);
+        var source = pianoInstrument.play(noteName, audioContext.currentTime, {
+          gain: gain,
+          duration: 100, // duración larga para mantener la nota
+          velocity: gain * 127
+        });
+        var noteGain = audioContext.createGain();
+        noteGain.gain.setValueAtTime(gain, audioContext.currentTime);
+        source.disconnect();
+        source.connect(noteGain);
+        noteGain.connect(highpass);
+        console.log("Nota reproducida (SIN PEDAL):", noteName, "gain:", gain);
+        return {
+          source: source,
+          gainNode: noteGain,
+          stop: function() {
+            noteGain.gain.cancelScheduledValues(audioContext.currentTime);
+            noteGain.gain.setValueAtTime(noteGain.gain.value, audioContext.currentTime);
+            noteGain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.2);
+            setTimeout(function(){
+              if (source.stop) { source.stop(); }
+            }, 250);
+          }
+        };
+      } else {
+        console.warn("El instrumento aún no se ha cargado.");
+      }
+    }
+
+    // Cargar archivo MIDI desde input
+    document.getElementById('midiFile').addEventListener('change', function(e) {
+      document.getElementById('fileName').textContent = e.target.files[0].name;
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          var midi = new MidiFile(e.target.result);
+          extractNotesFromMidi(midi);
+        } catch (error) {
+          console.error("Error al parsear el archivo MIDI:", error);
+        }
+      };
+      reader.readAsBinaryString(e.target.files[0]);
+    });
+
+    // Cargar MIDI desde URL
+    function loadMidiFromUrl(url, fileName) {
+      fetch(url)
+        .then(response => response.arrayBuffer())
+        .then(data => {
+          var reader = new FileReader();
+          reader.onload = function(e) {
+            try {
+              var midi = new MidiFile(e.target.result);
+              extractNotesFromMidi(midi);
+            } catch (error) {
+              console.error("Error al parsear el archivo MIDI:", error);
+            }
+          };
+          reader.readAsBinaryString(new Blob([data]));
+          document.getElementById('fileName').textContent = fileName;
+        })
+        .catch(error => console.error("Error al cargar el MIDI:", error));
+    }
+
+    // Cargar MIDI por defecto
+    function loadDefaultMidi() {
+      const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/Handel & Halvorsen Passacaglia.mid";
+      const defaultFileName = "Handel & Halvorsen Passacaglia.mid";
+      loadMidiFromUrl(defaultMidiUrl, defaultFileName);
+    }
+
+    // Extraer notas del archivo MIDI
+    function extractNotesFromMidi(midi) {
+      notesToPlay = [];
+      currentNoteIndex = 0;
+      var absoluteTime = 0;
+      midi.tracks.forEach(track => {
+        absoluteTime = 0;
+        track.forEach(event => {
+          if (event.deltaTime) {
+            absoluteTime += event.deltaTime;
+          }
+          if (event.subtype === 'noteOn') {
+            notesToPlay.push({
+              noteNumber: event.noteNumber,
+              time: absoluteTime
+            });
+          }
+        });
+      });
+      notesToPlay.sort((a, b) => a.time - b.time);
+      console.log("Notas MIDI extraídas:", notesToPlay);
+    }
+
+    // Selector de canciones de muestra
+    document.getElementById('sampleSongs').addEventListener('change', function() {
+      if (this.value) {
+        const fileName = this.value;
+        const url = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/" + encodeURIComponent(fileName);
+        loadMidiFromUrl(url, fileName);
+      }
+    });
+
+    // Función auxiliar para generar un color aleatorio
+    function getRandomColor() {
+      return '#' + Math.floor(Math.random() * 16777215).toString(16);
+    }
+
+    // Función para alternar la interfaz entre modo normal y AR.
+    function toggleAR() {
+      var container = document.getElementById('container');
+      if (arMode) {
+        // En modo AR: se muestran únicamente las franjas con los nombres,
+        // se ocultan los controles, título, botones de fullscreen, etc.
+        document.getElementById('fullscreenBtn').style.display = "none";
+        document.querySelector('h1').style.display = "none";
+        document.getElementById('copyright').style.display = "none";
+        document.getElementById('buttons').style.display = "none";
+        // Se ajusta el contenedor para ocupar toda la pantalla y fondo transparente
+        container.style.border = "none";
+        container.style.background = "transparent";
+        container.style.width = "100%";
+        container.style.height = "100%";
+      } else {
+        // En modo normal se restauran todos los elementos
+        document.getElementById('fullscreenBtn').style.display = "";
+        document.querySelector('h1').style.display = "";
+        document.getElementById('copyright').style.display = "";
+        document.getElementById('buttons').style.display = "";
+        container.style.border = "6px solid black";
+        container.style.background = "#FFFFFF";
+        container.style.width = "350px";
+        container.style.height = "auto";
+      }
+    }
+
+    // Manejo de eventos de toque/puntero (para modo normal y AR)
     function handlePointerDown(e) {
+      // Evitar múltiples disparos con mouse
       if (e.pointerType === "mouse" && e.buttons !== 1) return;
+      
+      // Obtener posición y calcular gain
       var rect = e.currentTarget.getBoundingClientRect();
       var y = e.clientY;
       var relativeY = (y - rect.top) / rect.height;
       var effectiveGain = computeEffectiveGain(relativeY);
+      
+      // Generar un color aleatorio y asignarlo al fondo (o en AR puede quedar transparente)
       var randomColor = getRandomColor();
-      document.body.style.backgroundColor = randomColor;
+      if (!arMode) {
+        document.body.style.backgroundColor = randomColor;
+      }
+      
+      // Obtener el contenedor de las franjas y reiniciar todas a negro
       var dynamicContainer = document.getElementById('dynamicMarkingsContainer');
       var rows = dynamicContainer.children;
       for (var i = 0; i < rows.length; i++) {
         rows[i].style.backgroundColor = 'black';
       }
+      
+      // Determinar la fila tocada según la posición
       var containerRect = dynamicContainer.getBoundingClientRect();
       var relativeYInContainer = (e.clientY - containerRect.top) / containerRect.height;
       var rowIndex = Math.floor(relativeYInContainer * rows.length);
-      if (rowIndex < 0 || rowIndex >= rows.length) { rowIndex = 0; }
+      if (rowIndex < 0 || rowIndex >= rows.length) {
+        rowIndex = 0;
+      }
+      // Asignar el color aleatorio a la fila tocada
       rows[rowIndex].style.backgroundColor = randomColor;
-      // Reproducir nota (para este ejemplo se usa defaultMidiNote)
-      playPianoNote(effectiveGain, defaultMidiNote);
+      
+      // Reproducir nota(s)
+      var notesArray = [];
+      if (notesToPlay.length > 0 && currentNoteIndex < notesToPlay.length) {
+        var groupThreshold = 0.001;
+        var groupEnd = currentNoteIndex + 1;
+        while (groupEnd < notesToPlay.length &&
+               Math.abs(notesToPlay[groupEnd].time - notesToPlay[currentNoteIndex].time) < groupThreshold) {
+          groupEnd++;
+        }
+        for (var i = currentNoteIndex; i < groupEnd; i++) {
+          var note = notesToPlay[i];
+          if (pedalOn) {
+            playPianoNote(effectiveGain, note.noteNumber);
+          } else {
+            notesArray.push(playNoteNonPedal(effectiveGain, note.noteNumber));
+          }
+        }
+        currentNoteIndex = groupEnd;
+        if (currentNoteIndex >= notesToPlay.length) {
+          currentNoteIndex = 0;
+        }
+      } else {
+        if (pedalOn) {
+          playPianoNote(effectiveGain, defaultMidiNote);
+        } else {
+          notesArray.push(playNoteNonPedal(effectiveGain, defaultMidiNote));
+        }
+      }
+      if (!pedalOn) {
+        activeNotes[e.pointerId] = notesArray;
+      }
     }
+
+    // Al levantar el dedo (pointerup o touchend)
     function handlePointerUp(e) {
-      // Si fuese SIN PEDAL, se podría detener la nota aquí.
+      if (!pedalOn && activeNotes[e.pointerId]) {
+        activeNotes[e.pointerId].forEach(function(noteObj) {
+          noteObj.stop();
+        });
+        delete activeNotes[e.pointerId];
+      }
     }
+
+    // Asignación de eventos
     var touchBox = document.getElementById('touchBox');
     if (window.PointerEvent) {
       touchBox.addEventListener('pointerdown', handlePointerDown);
       touchBox.addEventListener('pointerup', handlePointerUp);
       touchBox.addEventListener('pointercancel', handlePointerUp);
     } else {
+      // Fallback para dispositivos táctiles
       touchBox.addEventListener('touchstart', function(e) {
         e.preventDefault();
         Array.from(e.changedTouches).forEach(function(touch) {
@@ -368,138 +534,60 @@
       touchBox.addEventListener('click', handlePointerDown);
     }
 
-    // Botón de pantalla completa (modo normal)
+    // Reanudar AudioContext en caso de suspensión
+    document.addEventListener('click', function() {
+      if (audioContext.state === 'suspended') {
+        audioContext.resume().then(() => {
+          console.log("AudioContext reanudado");
+        });
+      }
+    });
+
+    // Botón de pantalla completa
     var fullscreenBtn = document.getElementById('fullscreenBtn');
     fullscreenBtn.addEventListener('click', function(e) {
       var elem = document.getElementById('container');
       if (!document.fullscreenElement) {
-        elem.requestFullscreen().then(() => { fullscreenBtn.textContent = "×"; })
-          .catch(err => { console.error("Error al activar pantalla completa:", err); });
+        elem.requestFullscreen().then(() => {
+          fullscreenBtn.textContent = "×";
+        }).catch(err => {
+          console.error("Error al activar pantalla completa:", err);
+        });
       } else {
-        document.exitFullscreen().then(() => { fullscreenBtn.textContent = "⛶"; });
+        document.exitFullscreen().then(() => {
+          fullscreenBtn.textContent = "⛶";
+        });
       }
       e.stopPropagation();
     });
     document.addEventListener('fullscreenchange', function() {
-      if (!document.fullscreenElement) { fullscreenBtn.textContent = "⛶"; }
+      if (!document.fullscreenElement) {
+        fullscreenBtn.textContent = "⛶";
+      }
     });
 
-    // Botón de Pedal (modo normal)
+    // Botón de Pedal para alternar modo
     var pedalBtn = document.getElementById('pedalBtn');
     pedalBtn.addEventListener('click', function() {
       pedalOn = !pedalOn;
       pedalBtn.textContent = pedalOn ? "Pedal ON" : "Pedal OFF";
-      pedalBtn.style.backgroundColor = pedalOn ? "#90EE90" : "#ADD8E6";
+      if (pedalOn) {
+        pedalBtn.style.backgroundColor = "#90EE90"; // Verde claro
+      } else {
+        pedalBtn.style.backgroundColor = "#ADD8E6"; // Azul claro original
+      }
       console.log("Pedal:", pedalOn ? "ON" : "OFF");
     });
 
-    // Cargar MIDI por defecto
-    function loadMidiFromUrl(url, fileName) {
-      fetch(url)
-        .then(response => response.arrayBuffer())
-        .then(data => {
-          var reader = new FileReader();
-          reader.onload = function(e) {
-            try {
-              var midi = new MidiFile(e.target.result);
-              extractNotesFromMidi(midi);
-            } catch (error) {
-              console.error("Error al parsear el archivo MIDI:", error);
-            }
-          };
-          reader.readAsBinaryString(new Blob([data]));
-          document.getElementById('fileName').textContent = fileName;
-        })
-        .catch(error => console.error("Error al cargar el MIDI:", error));
-    }
-    function loadDefaultMidi() {
-      const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/Handel%20&%20Halvorsen%20Passacaglia.mid";
-      const defaultFileName = "Handel & Halvorsen Passacaglia.mid";
-      loadMidiFromUrl(defaultMidiUrl, defaultFileName);
-    }
-    function extractNotesFromMidi(midi) {
-      notesToPlay = [];
-      currentNoteIndex = 0;
-      var absoluteTime = 0;
-      midi.tracks.forEach(track => {
-        absoluteTime = 0;
-        track.forEach(event => {
-          if (event.deltaTime) { absoluteTime += event.deltaTime; }
-          if (event.subtype === 'noteOn') {
-            notesToPlay.push({ noteNumber: event.noteNumber, time: absoluteTime });
-          }
-        });
-      });
-      notesToPlay.sort((a, b) => a.time - b.time);
-      console.log("Notas MIDI extraídas:", notesToPlay);
-    }
-    document.getElementById('midiFile').addEventListener('change', function(e) {
-      document.getElementById('fileName').textContent = e.target.files[0].name;
-      var reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          var midi = new MidiFile(e.target.result);
-          extractNotesFromMidi(midi);
-        } catch (error) {
-          console.error("Error al parsear el archivo MIDI:", error);
-        }
-      };
-      reader.readAsBinaryString(e.target.files[0]);
-    });
-    document.getElementById('sampleSongs').addEventListener('change', function() {
-      if (this.value) {
-        const fileName = this.value;
-        const url = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/" + encodeURIComponent(fileName);
-        loadMidiFromUrl(url, fileName);
-      }
-    });
-    function getRandomColor() {
-      return '#' + Math.floor(Math.random() * 16777215).toString(16);
-    }
-
-    // EVENTOS MODO AR
-    // Se agrega un listener para cada stripe en la escena AR
-    function setupARStripes() {
-      var arStripes = document.querySelectorAll('.stripe');
-      arStripes.forEach(function(stripe) {
-        stripe.addEventListener('click', function (evt) {
-          // Reiniciar todas a negro
-          arStripes.forEach(function(s) {
-            s.setAttribute('material', 'color', 'black');
-          });
-          var randomColor = getRandomColor();
-          // Asignar color al stripe tocado
-          stripe.setAttribute('material', 'color', randomColor);
-          // Obtener el índice de la fila y calcular gain
-          var rowIndex = parseInt(stripe.getAttribute('data-index'));
-          var gain = computeGainFromRow(rowIndex, arStripes.length);
-          // Reproducir nota (usando defaultMidiNote)
-          playPianoNote(gain, defaultMidiNote);
-        });
-      });
-    }
-    // Cuando carga el AR scene, se configuran los eventos
-    window.addEventListener('load', function() {
-      loadDefaultMidi();
-      setupARStripes();
+    // Botón AR (predefinido) para alternar modo AR
+    document.getElementById('arBtn').addEventListener('click', function() {
+      arMode = !arMode;
+      toggleAR();
+      console.log("Modo AR:", arMode ? "activado" : "desactivado");
     });
 
-    // Botón para cambiar entre modos
-    var modeBtn = document.getElementById('modeBtn');
-    modeBtn.addEventListener('click', function() {
-      var container = document.getElementById('container');
-      var arContainer = document.getElementById('arContainer');
-      // Si se está en modo normal, cambiar a AR
-      if (container.style.display !== "none") {
-        container.style.display = "none";
-        arContainer.style.display = "block";
-        modeBtn.textContent = "Modo Normal";
-      } else {
-        container.style.display = "flex";
-        arContainer.style.display = "none";
-        modeBtn.textContent = "Modo AR";
-      }
-    });
+    // Cargar MIDI por defecto al iniciar
+    window.addEventListener('load', loadDefaultMidi);
   </script>
 </body>
 </html>
