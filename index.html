@@ -2,13 +2,14 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <!-- Meta viewport -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
   <title>DreamTouch</title>
   <!-- Shim para evitar error de require -->
   <script>
     window.require = function() {};
   </script>
-  <!-- Scripts MIDI y Soundfont-player (usando versión 0.8.0 desde cdnjs) -->
+  <!-- Scripts MIDI y soundfont (usando versión 0.12.0 de Soundfont-player desde cdn.jsdelivr.net) -->
   <script src="https://cdn.jsdelivr.net/npm/webmidiapishim"></script>
   <script src="https://cdn.jsdelivr.net/npm/webmidi@2"></script>
   <script src="https://cdn.jsdelivr.net/gh/gasman/jasmid@master/stream.js"></script>
@@ -176,13 +177,12 @@
     // CONFIGURACIÓN DEL AUDIO
     var audioContext = new (window.AudioContext || window.webkitAudioContext)();
     var pianoInstrument = null;
-
-    // Cargamos el piano "acoustic_grand_piano" usando el soundfont de MusyngKite
     if (window.Soundfont && typeof window.Soundfont.instrument === 'function') {
+      // Cargamos el instrumento usando el paquete pre-renderizado de MusyngKite para "acoustic_grand_piano"
       window.Soundfont.instrument(
         audioContext,
-        'acoustic_grand_piano',  // Nombre del instrumento
-        { soundfont: 'MusyngKite' } // Usar el paquete MusyngKite pre-renderizado
+        'acoustic_grand_piano',
+        { soundfont: 'MusyngKite' }
       ).then(function(piano) {
           pianoInstrument = piano;
           console.log("Instrumento Acoustic Grand Piano (MusyngKite) cargado.");
@@ -205,19 +205,20 @@
       return noteNames[midi % 12] + octave;
     }
 
-    // Cálculo continuo del gain según la posición vertical
+    // Calcula el gain de forma continua según la posición vertical
     function computeEffectiveGain(relativeY) {
       var minGain = 0.15;
       var maxGain = 1.0;
       return minGain + (maxGain - minGain) * (1 - relativeY);
     }
 
-    // Función para reproducir nota usando soundfont-player.
+    // Función para reproducir nota; se agrega la opción "velocity" para ayudar a seleccionar la muestra correcta
     function playPianoNote(gain, midiNote) {
       if (pianoInstrument) {
         var noteName = midiNoteToNoteName(midiNote);
-        pianoInstrument.play(noteName, audioContext.currentTime, { gain: gain, duration: noteDuration });
-        console.log("Nota reproducida:", noteName, "gain:", gain);
+        // Se pasa "velocity" (valor entre 0 y 127) calculado a partir del gain
+        pianoInstrument.play(noteName, audioContext.currentTime, { gain: gain, duration: noteDuration, velocity: gain * 127 });
+        console.log("Nota reproducida:", noteName, "gain:", gain, "velocity:", gain * 127);
       } else {
         console.warn("El instrumento aún no se ha cargado.");
       }
