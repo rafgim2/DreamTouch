@@ -8,7 +8,7 @@
   <!-- Shim para require -->
   <script>
     window.require = function() {};
-    window.Soundfont.defaultSoundfont = '';
+    // Se ha eliminado la línea que asignaba defaultSoundfont porque window.Soundfont aún no estaba definido.
   </script>
   <!-- Scripts MIDI y soundfont -->
   <script src="https://cdn.jsdelivr.net/npm/webmidiapishim"></script>
@@ -27,7 +27,7 @@
       margin: 0;
       transition: background-color 0.3s ease;
     }
-    /* Contenedor principal con borde amarillo */
+    /* Contenedor principal centrado con borde amarillo */
     #container {
       display: flex;
       flex-direction: column;
@@ -58,7 +58,7 @@
       display: flex;
       flex-direction: column;
     }
-    /* Franjas dinámicas con nombres completos en blanco */
+    /* Franjas dinámicas: nombres en blanco, sin selección */
     #dynamicMarkingsContainer {
       width: 100%;
       height: 100%;
@@ -79,7 +79,7 @@
     #dynamicMarkingsContainer > div:last-child {
       border-bottom: none;
     }
-    /* Controles inferiores con mayor separación */
+    /* Controles inferiores: mayor separación vertical */
     #buttons {
       margin-top: 40px;
       display: flex;
@@ -260,7 +260,7 @@
 
     // Cargar MIDI por defecto
     function loadDefaultMidi() {
-      const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/Beethoven Para Elisa.mid";
+      const defaultMidiUrl = "https://67f1dc5a756bc2e2367627ba--soft-fairy-ff4b6b.netlify.app/Beethoven%20Para%20Elisa.mid";
       const defaultFileName = "Beethoven Para Elisa.mid";
       loadMidiFromUrl(defaultMidiUrl, defaultFileName);
     }
