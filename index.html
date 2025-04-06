@@ -2,20 +2,18 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <!-- Meta viewport -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
   <title>DreamTouch</title>
-  <!-- Shim para require -->
+  <!-- Shim para evitar error de require -->
   <script>
     window.require = function() {};
   </script>
-  <!-- Scripts MIDI y soundfont -->
+  <!-- Scripts MIDI y Soundfont-player (usando versión 0.8.0 desde cdnjs) -->
   <script src="https://cdn.jsdelivr.net/npm/webmidiapishim"></script>
   <script src="https://cdn.jsdelivr.net/npm/webmidi@2"></script>
   <script src="https://cdn.jsdelivr.net/gh/gasman/jasmid@master/stream.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/gasman/jasmid@master/midifile.js"></script>
-  <!-- Usamos la versión 0.8.0 de Soundfont-player desde cdnjs -->
-  <script src="https://cdn.jsdelivr.net/npm/soundfont-player@0.12.0/dist/soundfont-player.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/soundfont-player/0.8.0/soundfont-player.min.js"></script>
   <style>
     /* Fondo blanco */
     body {
@@ -178,14 +176,16 @@
     // CONFIGURACIÓN DEL AUDIO
     var audioContext = new (window.AudioContext || window.webkitAudioContext)();
     var pianoInstrument = null;
+
+    // Cargamos el piano "acoustic_grand_piano" usando el soundfont de MusyngKite
     if (window.Soundfont && typeof window.Soundfont.instrument === 'function') {
       window.Soundfont.instrument(
         audioContext,
-        'https://67f1dc5a756bc2e2367627ba--soft-fairy-ff4b6b.netlify.app/GeneralUser%20GS%20XG%20v1.471.sf2',
-        { format: 'sf2', custom: true, disableFallback: true, soundfont: 'custom', from: '', baseUrl: '' }
+        'acoustic_grand_piano',  // Nombre del instrumento
+        { soundfont: 'MusyngKite' } // Usar el paquete MusyngKite pre-renderizado
       ).then(function(piano) {
           pianoInstrument = piano;
-          console.log("Instrumento SF2 cargado.");
+          console.log("Instrumento Acoustic Grand Piano (MusyngKite) cargado.");
         })
         .catch(function(error) {
           console.error("Error al cargar el instrumento:", error);
