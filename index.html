@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <!-- Meta viewport -->
+  <!-- Meta viewport sin restricciones de rotación -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
   <title>DreamTouch</title>
   <!-- Scripts MIDI y soundfont -->
@@ -12,7 +12,7 @@
   <script src="https://cdn.jsdelivr.net/gh/gasman/jasmid@master/midifile.js"></script>
   <script src="https://unpkg.com/soundfont-player/dist/soundfont-player.js"></script>
   <style>
-    /* Fondo de la página: blanco */
+    /* Fondo de la página: inicialmente blanco */
     body {
       background-color: #FFFFFF;
       display: flex;
@@ -22,7 +22,7 @@
       margin: 0;
       transition: background-color 0.3s ease;
     }
-    /* Contenedor principal centrado con borde amarillo */
+    /* Contenedor principal centrado con borde amarillo y disposición en columna */
     #container {
       display: flex;
       flex-direction: column;
@@ -44,7 +44,7 @@
       margin-top: -10px;
       font-size: 0.9em;
     }
-    /* Área de toque: fondo negro, dividido en 6 franjas iguales */
+    /* Cuadro de toque: fondo negro, dividido en 6 franjas iguales */
     #touchBox {
       width: 100%;
       height: 400px;
@@ -53,7 +53,7 @@
       display: flex;
       flex-direction: column;
     }
-    /* Franjas de dinámica con nombres completos, en blanco y sin selección de texto */
+    /* Contenedor para la regla de dinámica: franjas horizontales con nombres completos, en blanco y sin selección de texto */
     #dynamicMarkingsContainer {
       width: 100%;
       height: 100%;
@@ -74,7 +74,7 @@
     #dynamicMarkingsContainer > div:last-child {
       border-bottom: none;
     }
-    /* Controles inferiores: separación vertical mayor */
+    /* Controles inferiores: se separan más verticalmente */
     #buttons {
       margin-top: 40px;
       display: flex;
@@ -97,7 +97,7 @@
     #midiFile {
       display: none;
     }
-    /* Nombre del archivo: cursiva, color negro */
+    /* Nombre del archivo en cursiva y en negro */
     #fileName {
       font-style: italic;
       color: black;
@@ -124,11 +124,9 @@
   <div id="container">
     <h1>DreamTouch</h1>
     <div id="copyright">
-      <a href="https://www.youtube.com/@rafgim" target="_blank" style="color: inherit; text-decoration: none;">
-        © By Rafael Gimeno
-      </a>
+      <a href="https://www.youtube.com/@rafgim" target="_blank" style="color: inherit; text-decoration: none;">© By Rafael Gimeno</a>
     </div>
-    <!-- Área de toque -->
+    <!-- Área de toque: dividida en franjas dinámicas -->
     <div id="touchBox">
       <div id="dynamicMarkingsContainer">
         <div>Fortissimo</div>
@@ -168,19 +166,18 @@
   </div>
 
   <script>
-    // Variables para notas MIDI
+    // VARIABLES PARA LAS NOTAS MIDI
     var notesToPlay = [];
     var currentNoteIndex = 0;
-    
-    // Configuración del AudioContext
+
+    // CONFIGURACIÓN DEL AUDIO
     var audioContext = new (window.AudioContext || window.webkitAudioContext)();
     var pianoInstrument = null;
-    
-    // Cargar el instrumento SF2 usando la URL raw (nota: asegúrate de que el archivo se sirva con CORS habilitado)
     if (window.Soundfont && typeof window.Soundfont.instrument === 'function') {
+      // Usamos la URL raw de GitHub (nota: asegúrate de que el archivo no esté en Git LFS)
       window.Soundfont.instrument(
         audioContext,
-        'https://github.com/rafgim2/PRUEBAS/raw/refs/heads/main/GeneralUser%20GS%20XG%20v1.471.sf2',
+        'https://raw.githubusercontent.com/rafgim2/PRUEBAS/main/GeneralUser%20GS%20XG%20v1.471.sf2',
         { format: 'sf2' }
       ).then(function(piano) {
           pianoInstrument = piano;
@@ -192,26 +189,28 @@
     } else {
       console.error("No se encontró el método instrument en Soundfont.");
     }
-    
+
     // Duración de las notas: 2 segundos
     var noteDuration = 2.0;
     var defaultMidiNote = 60; // C4
-    
-    // Función para convertir número MIDI a nombre de nota (ej. "C4")
+
+    // Función para convertir número MIDI a nota (ej. "C4")
     function midiNoteToNoteName(midi) {
       var octave = Math.floor(midi / 12) - 1;
       var noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
       return noteNames[midi % 12] + octave;
     }
-    
-    // Calcula el gain de forma continua: gain = minGain + (maxGain - minGain) * (1 - relativeY)
+
+    // Usamos una fórmula continua para calcular el gain:
+    // gain = minGain + (maxGain - minGain) * (1 - relativeY)
+    // Donde minGain = 0.15 y maxGain = 1.0.
     function computeEffectiveGain(relativeY) {
       var minGain = 0.15;
       var maxGain = 1.0;
       return minGain + (maxGain - minGain) * (1 - relativeY);
     }
-    
-    // Reproduce una nota usando Soundfont-player
+
+    // Función para reproducir nota usando soundfont-player.
     function playPianoNote(gain, midiNote) {
       if (pianoInstrument) {
         var noteName = midiNoteToNoteName(midiNote);
@@ -221,8 +220,8 @@
         console.warn("El instrumento aún no se ha cargado.");
       }
     }
-    
-    // Cargar archivo MIDI desde input
+
+    // --- EVENTO PARA CARGAR ARCHIVO MIDI ---
     document.getElementById('midiFile').addEventListener('change', function(e) {
       document.getElementById('fileName').textContent = e.target.files[0].name;
       var reader = new FileReader();
@@ -236,8 +235,8 @@
       };
       reader.readAsBinaryString(e.target.files[0]);
     });
-    
-    // Función para cargar MIDI desde una URL
+
+    // Función para cargar un MIDI desde una URL
     function loadMidiFromUrl(url, fileName) {
       fetch(url)
         .then(response => response.arrayBuffer())
@@ -256,14 +255,14 @@
         })
         .catch(error => console.error("Error al cargar el MIDI:", error));
     }
-    
+
     // Cargar MIDI por defecto
     function loadDefaultMidi() {
-      const defaultMidiUrl = "https://github.com/rafgim2/PRUEBAS/raw/refs/heads/main/Beethoven%20Para%20Elisa.mid";
+      const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/PRUEBAS/main/Beethoven%20Para%20Elisa.mid";
       const defaultFileName = "Beethoven Para Elisa.mid";
       loadMidiFromUrl(defaultMidiUrl, defaultFileName);
     }
-    
+
     // Extraer notas del archivo MIDI
     function extractNotesFromMidi(midi) {
       notesToPlay = [];
@@ -286,33 +285,34 @@
       notesToPlay.sort((a, b) => a.time - b.time);
       console.log("Notas MIDI extraídas:", notesToPlay);
     }
-    
-    // Manejar el selector de canciones de muestra
+
+    // --- EVENTO PARA EL SELECTOR DE CANCIONES DE MUESTRA ---
     document.getElementById('sampleSongs').addEventListener('change', function() {
       if (this.value) {
         const fileName = this.value;
-        const url = "https://github.com/rafgim2/PRUEBAS/raw/refs/heads/main/" + encodeURIComponent(fileName);
+        const url = "https://raw.githubusercontent.com/rafgim2/PRUEBAS/main/" + encodeURIComponent(fileName);
         loadMidiFromUrl(url, fileName);
       }
     });
-    
+
     // Función auxiliar para generar un color aleatorio
     function getRandomColor() {
       return '#' + Math.floor(Math.random() * 16777215).toString(16);
     }
-    
-    // Manejar el toque en el área
+
+    // --- EVENTO PARA EL CUADRO DE TOQUE ---
     function handleTouch(e) {
       var rect = e.currentTarget.getBoundingClientRect();
       var y = (e.touches && e.touches.length > 0) ? e.touches[0].clientY : e.clientY;
       var relativeY = (y - rect.top) / rect.height;
+      // Calcular el gain de forma continua según la posición
       var effectiveGain = computeEffectiveGain(relativeY);
       console.log("relativeY:", relativeY, "effectiveGain:", effectiveGain);
-      
+
       // Cambiar el fondo del body a un color aleatorio
       document.body.style.backgroundColor = getRandomColor();
-      
-      // Reproducir notas usando el gain calculado
+
+      // Reproducir notas agrupadas usando el gain calculado
       if (notesToPlay.length > 0 && currentNoteIndex < notesToPlay.length) {
         var groupThreshold = 0.001;
         var groupEnd = currentNoteIndex + 1;
@@ -332,8 +332,8 @@
         playPianoNote(effectiveGain, defaultMidiNote);
       }
     }
-    
-    // Agregar el evento de toque según el dispositivo
+
+    // Agregar el evento según el tipo de dispositivo
     var touchBox = document.getElementById('touchBox');
     if (window.PointerEvent) {
       touchBox.addEventListener('pointerdown', handleTouch);
@@ -345,8 +345,8 @@
     } else {
       touchBox.addEventListener('click', handleTouch);
     }
-    
-    // Reanudar el AudioContext cuando el usuario interactúa
+
+    // Reanudar el AudioContext tras la interacción
     document.addEventListener('click', function() {
       if (audioContext.state === 'suspended') {
         audioContext.resume().then(() => {
@@ -354,8 +354,8 @@
         });
       }
     });
-    
-    // Cargar el MIDI por defecto al cargar la página
+
+    // Cargar MIDI por defecto al cargar la página
     window.addEventListener('load', loadDefaultMidi);
   </script>
 </body>
