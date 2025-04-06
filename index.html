@@ -65,6 +65,7 @@
       z-index: 10;
     }
     /* Área de toque: fondo negro, dividido en 6 franjas */
+    /* Se añade touch-action: none para capturar todos los eventos táctiles */
     #touchBox {
       width: 100%;
       height: 400px;
@@ -72,6 +73,7 @@
       display: flex;
       flex-direction: column;
       position: relative;
+      touch-action: none;
     }
     /* Franjas dinámicas: nombres en blanco, sin selección */
     #dynamicMarkingsContainer {
@@ -438,7 +440,6 @@
 
     // Al levantar el dedo (pointerup o touchend)
     function handlePointerUp(e) {
-      // Si se usó pointer capture, liberarlo
       if (e.target.releasePointerCapture) {
         e.target.releasePointerCapture(e.pointerId);
       }
@@ -453,11 +454,11 @@
     // Asignación de eventos
     var touchBox = document.getElementById('touchBox');
     if (window.PointerEvent) {
-      touchBox.addEventListener('pointerdown', handlePointerDown);
+      touchBox.addEventListener('pointerdown', handlePointerDown, { passive: false });
       touchBox.addEventListener('pointerup', handlePointerUp);
       touchBox.addEventListener('pointercancel', handlePointerUp);
     } else {
-      // Fallback para dispositivos táctiles: se asigna un ID único basado en el identificador del toque
+      // Fallback para dispositivos táctiles
       touchBox.addEventListener('touchstart', function(e) {
         e.preventDefault();
         Array.from(e.changedTouches).forEach(function(touch) {
@@ -470,7 +471,7 @@
           };
           handlePointerDown(fakeEvent);
         });
-      });
+      }, { passive: false });
       touchBox.addEventListener('touchend', function(e) {
         Array.from(e.changedTouches).forEach(function(touch) {
           var fakeEvent = {
