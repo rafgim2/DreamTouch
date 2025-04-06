@@ -130,7 +130,7 @@
     <div id="copyright">
       <a href="https://www.youtube.com/@rafgim" target="_blank" style="color: inherit; text-decoration: none;">© By Rafael Gimeno</a>
     </div>
-    <!-- Área de toque dividida en franjas dinámicas -->
+    <!-- Área de toque dividida en 6 franjas -->
     <div id="touchBox">
       <div id="dynamicMarkingsContainer">
         <div>Fortissimo</div>
@@ -181,7 +181,7 @@
       window.Soundfont.instrument(
         audioContext,
         'https://67f1dc5a756bc2e2367627ba--soft-fairy-ff4b6b.netlify.app/GeneralUser%20GS%20XG%20v1.471.sf2',
-        { format: 'sf2', custom: true, disableFallback: true, soundfont: 'custom', baseUrl: '' }
+        { format: 'sf2', custom: true, disableFallback: true, soundfont: 'custom', baseUrl: null }
       ).then(function(piano) {
           pianoInstrument = piano;
           console.log("Instrumento SF2 cargado.");
@@ -291,7 +291,7 @@
     document.getElementById('sampleSongs').addEventListener('change', function() {
       if (this.value) {
         const fileName = this.value;
-        const url = "https://67f1dc5a756bc2e2367627ba--soft-fairy-ff4b6b.netlify.app/" + encodeURIComponent(fileName);
+        const url = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/" + encodeURIComponent(fileName);
         loadMidiFromUrl(url, fileName);
       }
     });
