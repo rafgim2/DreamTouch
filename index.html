@@ -16,12 +16,11 @@
   <script src="https://cdn.jsdelivr.net/gh/gasman/jasmid@master/midifile.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/soundfont-player@0.12.0/dist/soundfont-player.min.js"></script>
   <style>
-    /* Fondo blanco, bloquea scroll/zoom y deshabilita desplazamiento */
+    /* Fondo blanco y bloquea scroll/zoom */
     body {
       background-color: #FFFFFF;
       margin: 0;
       overflow: hidden;
-      touch-action: none;
       display: flex;
       justify-content: center;
       align-items: center;
@@ -114,7 +113,27 @@
       border-radius: 5px;
       cursor: pointer;
     }
-    /* El selector de canciones y su contenedor mantienen estilos originales */
+    /* Botón del pedal: fondo azul claro, texto blanco */
+    #pedalBtn {
+      background-color: #ADD8E6;
+      color: white;
+      padding: 10px 20px;
+      font-size: 1em;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    /* Ocultar input */
+    #midiFile {
+      display: none;
+    }
+    /* Nombre del archivo en cursiva y negro */
+    #fileName {
+      font-style: italic;
+      margin-top: -10px;
+      color: black;
+    }
+    /* Selector de canciones */
     #sampleSongsContainer {
       display: flex;
       flex-direction: column;
@@ -129,22 +148,6 @@
       margin-bottom: 20px;
       border: none;
       text-align: center;
-    }
-    /* Nombre del archivo en cursiva y negro */
-    #fileName {
-      font-style: italic;
-      margin-top: -10px;
-      color: black;
-    }
-    /* Botón de pedal ajustado: tamaño reducido a la mitad */
-    #pedalBtn {
-      background-color: #ADD8E6;
-      color: white;
-      padding: 5px 10px;
-      font-size: 0.8em;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
     }
   </style>
 </head>
@@ -191,19 +194,12 @@
           <option value="Satie Gymnopedie n1.mid">Satie - Gymnopedie n1.mid</option>
         </select>
       </div>
-      <!-- Se muestra el nombre del archivo cargado -->
-      <div id="fileName"></div>
-      <!-- Botón de pedal posicionado debajo del nombre del archivo -->
       <button id="pedalBtn">Pedal OFF</button>
+      <div id="fileName"></div>
     </div>
   </div>
 
   <script>
-    // Bloquear scroll adicional en dispositivos táctiles
-    document.addEventListener("touchmove", function(e) {
-      e.preventDefault();
-    }, { passive: false });
-
     // VARIABLES PARA LAS NOTAS MIDI
     var notesToPlay = [];
     var currentNoteIndex = 0;
@@ -398,7 +394,7 @@
     function handlePointerDown(e) {
       // Evitar múltiples disparos con mouse
       if (e.pointerType === "mouse" && e.buttons !== 1) return;
-      // Uso de pointer capture si está disponible
+      // Si el navegador soporta pointer capture, se asigna al inicio del toque
       if (e.target.setPointerCapture) {
         e.target.setPointerCapture(e.pointerId);
       }
@@ -442,6 +438,7 @@
 
     // Al levantar el dedo (pointerup o touchend)
     function handlePointerUp(e) {
+      // Si se usó pointer capture, liberarlo
       if (e.target.releasePointerCapture) {
         e.target.releasePointerCapture(e.pointerId);
       }
