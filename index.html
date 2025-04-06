@@ -113,12 +113,12 @@
       border-radius: 5px;
       cursor: pointer;
     }
-    /* Botón del pedal: fondo azul claro, texto blanco */
+    /* Botón del pedal: fondo azul claro, texto blanco; tamaño reducido */
     #pedalBtn {
       background-color: #ADD8E6;
       color: white;
-      padding: 10px 20px;
-      font-size: 1em;
+      padding: 5px 10px;
+      font-size: 0.9em;
       border: none;
       border-radius: 5px;
       cursor: pointer;
@@ -194,8 +194,9 @@
           <option value="Satie Gymnopedie n1.mid">Satie - Gymnopedie n1.mid</option>
         </select>
       </div>
-      <button id="pedalBtn">Pedal OFF</button>
       <div id="fileName"></div>
+      <!-- Botón de pedal al final -->
+      <button id="pedalBtn">Pedal OFF</button>
     </div>
   </div>
 
@@ -457,7 +458,7 @@
       touchBox.addEventListener('pointerup', handlePointerUp);
       touchBox.addEventListener('pointercancel', handlePointerUp);
     } else {
-      // Fallback para dispositivos táctiles: se asigna un ID único basado en el identificador del toque
+      // Fallback para dispositivos táctiles
       touchBox.addEventListener('touchstart', function(e) {
         e.preventDefault();
         Array.from(e.changedTouches).forEach(function(touch) {
@@ -521,6 +522,12 @@
     pedalBtn.addEventListener('click', function() {
       pedalOn = !pedalOn;
       pedalBtn.textContent = pedalOn ? "Pedal ON" : "Pedal OFF";
+      // Cambiar el color de fondo cuando esté activado
+      if (pedalOn) {
+        pedalBtn.style.backgroundColor = "#90EE90"; // Verde claro
+      } else {
+        pedalBtn.style.backgroundColor = "#ADD8E6"; // Azul claro original
+      }
       console.log("Pedal:", pedalOn ? "ON" : "OFF");
     });
 
