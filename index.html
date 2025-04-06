@@ -2,16 +2,13 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <!-- Meta viewport sin restricciones de rotación -->
+  <!-- Meta viewport -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
   <title>DreamTouch</title>
-  <!-- Definición de require para evitar error -->
+  <!-- Shim para require -->
   <script>
     window.require = function() {};
-    // Desactivar el fallback predeterminado
-    if(window.Soundfont) {
-      window.Soundfont.defaultSoundfont = '';
-    }
+    window.Soundfont.defaultSoundfont = '';
   </script>
   <!-- Scripts MIDI y soundfont -->
   <script src="https://cdn.jsdelivr.net/npm/webmidiapishim"></script>
@@ -30,7 +27,7 @@
       margin: 0;
       transition: background-color 0.3s ease;
     }
-    /* Contenedor principal centrado con borde amarillo */
+    /* Contenedor principal con borde amarillo */
     #container {
       display: flex;
       flex-direction: column;
@@ -61,7 +58,7 @@
       display: flex;
       flex-direction: column;
     }
-    /* Franjas dinámicas: nombres completos en blanco, sin selección */
+    /* Franjas dinámicas con nombres completos en blanco */
     #dynamicMarkingsContainer {
       width: 100%;
       height: 100%;
@@ -82,7 +79,7 @@
     #dynamicMarkingsContainer > div:last-child {
       border-bottom: none;
     }
-    /* Controles inferiores: mayor separación vertical */
+    /* Controles inferiores con mayor separación */
     #buttons {
       margin-top: 40px;
       display: flex;
@@ -184,7 +181,7 @@
     if (window.Soundfont && typeof window.Soundfont.instrument === 'function') {
       window.Soundfont.instrument(
         audioContext,
-        'https://fanciful-fenglisu-5f39ce.netlify.app/GeneralUser%20GS%20XG%20v1.471%20(2).sf2',
+        'https://67f1dc5a756bc2e2367627ba--soft-fairy-ff4b6b.netlify.app/GeneralUser%20GS%20XG%20v1.471.sf2',
         { format: 'sf2', custom: true, disableFallback: true, soundfont: 'custom' }
       ).then(function(piano) {
           pianoInstrument = piano;
@@ -263,7 +260,7 @@
 
     // Cargar MIDI por defecto
     function loadDefaultMidi() {
-      const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/Beethoven Para Elisa.mid";
+      const defaultMidiUrl = "https://67f1dc5a756bc2e2367627ba--soft-fairy-ff4b6b.netlify.app/Beethoven%20Para%20Elisa.mid";
       const defaultFileName = "Beethoven Para Elisa.mid";
       loadMidiFromUrl(defaultMidiUrl, defaultFileName);
     }
@@ -295,7 +292,7 @@
     document.getElementById('sampleSongs').addEventListener('change', function() {
       if (this.value) {
         const fileName = this.value;
-        const url = "https://fanciful-fenglisu-5f39ce.netlify.app/" + encodeURIComponent(fileName);
+        const url = "https://67f1dc5a756bc2e2367627ba--soft-fairy-ff4b6b.netlify.app/" + encodeURIComponent(fileName);
         loadMidiFromUrl(url, fileName);
       }
     });
