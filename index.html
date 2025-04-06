@@ -277,7 +277,7 @@
       }
     }
 
-    // Reproducción en modo SIN PEDAL: la nota se mantiene hasta que se detenga manualmente
+    // Reproducción en modo SIN PEDAL: la nota se mantiene hasta detenerse manualmente
     function playNoteNonPedal(gain, midiNote) {
       if (pianoInstrument) {
         var noteName = midiNoteToNoteName(midiNote);
@@ -394,7 +394,7 @@
 
     // Al presionar (pointerdown o touchstart)
     function handlePointerDown(e) {
-      // Para evitar múltiples disparos en mouse
+      // Evitar múltiples disparos en mouse
       if (e.pointerType === "mouse" && e.buttons !== 1) return;
       var rect = e.currentTarget.getBoundingClientRect();
       var y = e.clientY;
@@ -402,7 +402,7 @@
       var effectiveGain = computeEffectiveGain(relativeY);
       document.body.style.backgroundColor = getRandomColor();
 
-      // Se utiliza un array para almacenar todas las notas activadas con este toque
+      // Array para almacenar todas las notas activadas con este toque
       var notesArray = [];
       if (notesToPlay.length > 0 && currentNoteIndex < notesToPlay.length) {
         var groupThreshold = 0.001;
@@ -430,13 +430,12 @@
           notesArray.push(playNoteNonPedal(effectiveGain, defaultMidiNote));
         }
       }
-      // Se almacenan todas las notas asociadas al identificador del toque
       if (!pedalOn) {
         activeNotes[e.pointerId] = notesArray;
       }
     }
 
-    // Al levantar el dedo (pointerup/touchend) se detienen todas las notas activas asociadas
+    // Al levantar el dedo (pointerup/touchend) se detienen todas las notas asociadas
     function handlePointerUp(e) {
       if (!pedalOn && activeNotes[e.pointerId]) {
         activeNotes[e.pointerId].forEach(function(noteObj) {
@@ -453,18 +452,21 @@
       touchBox.addEventListener('pointerup', handlePointerUp);
       touchBox.addEventListener('pointercancel', handlePointerUp);
     } else {
-      // Fallback para dispositivos táctiles
+      // Fallback para dispositivos táctiles: se itera sobre todos los toques
       touchBox.addEventListener('touchstart', function(e) {
         e.preventDefault();
-        var touch = e.changedTouches[0];
-        // Usamos touch.identifier como clave
-        touch.pointerId = touch.identifier;
-        handlePointerDown(touch);
+        for (var i = 0; i < e.changedTouches.length; i++) {
+          var touch = e.changedTouches[i];
+          touch.pointerId = touch.identifier;
+          handlePointerDown(touch);
+        }
       });
       touchBox.addEventListener('touchend', function(e) {
-        var touch = e.changedTouches[0];
-        touch.pointerId = touch.identifier;
-        handlePointerUp(touch);
+        for (var i = 0; i < e.changedTouches.length; i++) {
+          var touch = e.changedTouches[i];
+          touch.pointerId = touch.identifier;
+          handlePointerUp(touch);
+        }
       });
       touchBox.addEventListener('click', handlePointerDown);
     }
