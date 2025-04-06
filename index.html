@@ -400,34 +400,54 @@
     function handlePointerDown(e) {
       // Evitar múltiples disparos con mouse
       if (e.pointerType === "mouse" && e.buttons !== 1) return;
-      // Se elimina el uso de setPointerCapture/releasePointerCapture para evitar bloqueos
+      // Comentamos estas líneas para evitar problemas con toques rápidos
+      // if (e.target.setPointerCapture) {
+      //   e.target.setPointerCapture(e.pointerId);
+      // }
       var rect = e.currentTarget.getBoundingClientRect();
       var y = e.clientY;
       var relativeY = (y - rect.top) / rect.height;
       var effectiveGain = computeEffectiveGain(relativeY);
       document.body.style.backgroundColor = getRandomColor();
 
-      // Si se cargó un MIDI, se usa la siguiente nota en la secuencia;
-      // de lo contrario, se reproduce la nota por defecto
-      if (notesToPlay.length > 0) {
-        var note = notesToPlay[currentNoteIndex];
-        if (pedalOn) {
-          playPianoNote(effectiveGain, note.noteNumber);
-        } else {
-          playNoteNonPedal(effectiveGain, note.noteNumber);
+      var notesArray = [];
+      if (notesToPlay.length > 0 && currentNoteIndex < notesToPlay.length) {
+        var groupThreshold = 0.001;
+        var groupEnd = currentNoteIndex + 1;
+        while (groupEnd < notesToPlay.length &&
+               Math.abs(notesToPlay[groupEnd].time - notesToPlay[currentNoteIndex].time) < groupThreshold) {
+          groupEnd++;
         }
-        currentNoteIndex = (currentNoteIndex + 1) % notesToPlay.length;
+        for (var i = currentNoteIndex; i < groupEnd; i++) {
+          var note = notesToPlay[i];
+          if (pedalOn) {
+            playPianoNote(effectiveGain, note.noteNumber);
+          } else {
+            notesArray.push(playNoteNonPedal(effectiveGain, note.noteNumber));
+          }
+        }
+        currentNoteIndex = groupEnd;
+        if (currentNoteIndex >= notesToPlay.length) {
+          currentNoteIndex = 0;
+        }
       } else {
         if (pedalOn) {
           playPianoNote(effectiveGain, defaultMidiNote);
         } else {
-          playNoteNonPedal(effectiveGain, defaultMidiNote);
+          notesArray.push(playNoteNonPedal(effectiveGain, defaultMidiNote));
         }
+      }
+      if (!pedalOn) {
+        activeNotes[e.pointerId] = notesArray;
       }
     }
 
     // Al levantar el dedo (pointerup o touchend)
     function handlePointerUp(e) {
+      // Comentamos estas líneas para evitar problemas con toques rápidos
+      // if (e.target.releasePointerCapture) {
+      //   e.target.releasePointerCapture(e.pointerId);
+      // }
       if (!pedalOn && activeNotes[e.pointerId]) {
         activeNotes[e.pointerId].forEach(function(noteObj) {
           noteObj.stop();
