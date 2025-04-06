@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/gh/gasman/jasmid@master/midifile.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/soundfont-player@0.12.0/dist/soundfont-player.min.js"></script>
   <style>
-    /* Fondo blanco y bloquear scroll/zoom */
+    /* Fondo blanco y bloquea scroll/zoom */
     body {
       background-color: #FFFFFF;
       margin: 0;
@@ -147,7 +147,7 @@
     <div id="copyright">
       <a href="https://www.youtube.com/@rafgim" target="_blank" style="color: inherit; text-decoration: none;">© By Rafael Gimeno</a>
     </div>
-    <!-- Área de toque dividida en franjas dinámicas -->
+    <!-- Área de toque -->
     <div id="touchBox">
       <div id="dynamicMarkingsContainer">
         <div>Fortissimo</div>
@@ -168,9 +168,18 @@
         <label for="sampleSongs">Canciones de muestra:</label>
         <select id="sampleSongs">
           <option value="">-- Selecciona una canción --</option>
-          <!-- Utilizamos la dirección que proporcionaste para el MIDI de muestra -->
+          <option value="Bach Minueto.mid">Bach - Minueto.mid</option>
+          <option value="Bach Musette.mid">Bach - Musette.mid</option>
+          <option value="Beethoven Claro de luna.mid">Beethoven - Claro de luna.mid</option>
           <option value="Beethoven Para Elisa.mid">Beethoven Para Elisa.mid</option>
-          <!-- Puedes agregar más opciones si lo deseas -->
+          <option value="Beethoven Patética.mid">Beethoven - Patética.mid</option>
+          <option value="Clementi Sonatina.mid">Clementi - Sonatina.mid</option>
+          <option value="Mozart Sonata KV 545 2nd Mov.mid">Mozart - Sonata KV 545 2nd Mov.mid</option>
+          <option value="Gustavo Pascual Paquito el chocolatero.mid">Gustavo Pascual - Paquito el chocolatero.mid</option>
+          <option value="Handel & Halvorsen Passacaglia.mid">Handel & Halvorsen - Passacaglia.mid</option>
+          <option value="R.Korsakov El vuelo del moscardón.mid">R.Korsakov - El vuelo del moscardón.mid</option>
+          <option value="Rachmaninoff Concert nº2 Tercer mov.mid">Rachmaninoff - Concert nº2 Tercer mov.mid</option>
+          <option value="Satie Gymnopedie n1.mid">Satie - Gymnopedie n1.mid</option>
         </select>
       </div>
       <div id="fileName"></div>
@@ -185,24 +194,25 @@
     // CONFIGURACIÓN DEL AUDIO
     var audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-    // Creamos dos filtros para "suavizar" el sonido: 
-    // Highpass para eliminar frecuencias muy bajas y Lowpass para eliminar altas.
+    // Creamos dos filtros para "suavizar" el sonido:
+    // Un filtro highpass para eliminar frecuencias muy bajas (por debajo de 200 Hz)
     var highpass = audioContext.createBiquadFilter();
     highpass.type = "highpass";
-    highpass.frequency.value = 200; // Elimina frecuencias por debajo de 200 Hz
+    highpass.frequency.value = 200;
 
+    // Un filtro lowpass para eliminar frecuencias muy altas (por encima de 1500 Hz)
     var lowpass = audioContext.createBiquadFilter();
     lowpass.type = "lowpass";
-    lowpass.frequency.value = 1500; // Elimina frecuencias por encima de 1500 Hz
+    lowpass.frequency.value = 1500;
 
-    // Encadenamos los filtros: Highpass -> Lowpass -> destino final
+    // Encadenamos los filtros: highpass -> lowpass -> destino
     highpass.connect(lowpass);
     lowpass.connect(audioContext.destination);
 
-    // Variable para el instrumento de piano
+    // Variable para el instrumento
     var pianoInstrument = null;
     if (window.Soundfont && typeof window.Soundfont.instrument === 'function') {
-      // Cargamos el piano "acoustic_grand_piano" usando el paquete MusyngKite pre-renderizado.
+      // Cargamos el instrumento "acoustic_grand_piano" usando el paquete MusyngKite pre-renderizado
       Soundfont.instrument(audioContext, 'acoustic_grand_piano', { soundfont: 'MusyngKite' })
         .then(function(piano) {
           pianoInstrument = piano;
@@ -216,10 +226,10 @@
     }
 
     // Configuramos la duración de cada nota: 10 segundos
-    var noteDuration = 3.0;
+    var noteDuration = 10.0;
     var defaultMidiNote = 60; // C4
 
-    // Función para convertir número MIDI a nombre de nota (ej. "C4")
+    // Función para convertir un número MIDI a nota (ej. "C4")
     function midiNoteToNoteName(midi) {
       var octave = Math.floor(midi / 12) - 1;
       var noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -233,7 +243,7 @@
       return minGain + (maxGain - minGain) * (1 - relativeY);
     }
 
-    // Función para reproducir una nota con fade out de 2 segundos
+    // Función para reproducir una nota con fade out de 2 segundos al final
     function playPianoNote(gain, midiNote) {
       if (pianoInstrument) {
         var noteName = midiNoteToNoteName(midiNote);
@@ -243,16 +253,17 @@
           duration: noteDuration, 
           velocity: gain * 127 
         });
-        // Creamos un GainNode para programar el fade out
+        // Creamos un GainNode para controlar el fade out
         var noteGain = audioContext.createGain();
         noteGain.gain.setValueAtTime(gain, audioContext.currentTime);
-        // Desconectamos la conexión automática y conectamos a nuestro GainNode
+        // Desconectamos la salida automática y la redirigimos al GainNode
         source.disconnect();
         source.connect(noteGain);
-        // Mantenemos el gain constante hasta los 8 segundos y luego se hace fade out a 0 en 2 segundos (hasta 10 segundos)
-        noteGain.gain.setValueAtTime(gain, audioContext.currentTime + 2);
-        noteGain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 3);
-        // Conectamos la salida del GainNode a la cadena de filtros
+        // Programamos el fade out: mantenemos el gain constante hasta 8 segundos,
+        // luego se reduce linealmente a 0 a los 10 segundos.
+        noteGain.gain.setValueAtTime(gain, audioContext.currentTime + 8);
+        noteGain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 10);
+        // Conectamos el GainNode a la cadena de filtros
         noteGain.connect(highpass);
         console.log("Nota reproducida:", noteName, "gain:", gain, "velocity:", gain * 127);
       } else {
@@ -295,14 +306,14 @@
         .catch(error => console.error("Error al cargar el MIDI:", error));
     }
 
-    // Cargar un archivo MIDI por defecto usando la URL proporcionada
+    // Cargar el archivo MIDI por defecto usando la URL proporcionada (GitHub raw)
     function loadDefaultMidi() {
-      const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/Beethoven%20Para%20Elisa.mid";
+      const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/DreamTouch/main/Beethoven%20Para%20Elisa.mid";
       const defaultFileName = "Beethoven Para Elisa.mid";
       loadMidiFromUrl(defaultMidiUrl, defaultFileName);
     }
 
-    // Extraer notas del archivo MIDI
+    // Extraer las notas del archivo MIDI
     function extractNotesFromMidi(midi) {
       notesToPlay = [];
       currentNoteIndex = 0;
@@ -329,8 +340,8 @@
     document.getElementById('sampleSongs').addEventListener('change', function() {
       if (this.value) {
         const fileName = this.value;
-        // La URL se forma usando la dirección base de tu Netlify si se desea; pero en este caso, para el MIDI de muestra usamos la URL directa de GitHub
-        const url = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/" + encodeURIComponent(fileName);
+        // Usamos la URL base de GitHub raw para los MIDI de muestra
+        const url = "https://raw.githubusercontent.com/rafgim2/DreamTouch/main/" + encodeURIComponent(fileName);
         loadMidiFromUrl(url, fileName);
       }
     });
@@ -382,7 +393,6 @@
       touchBox.addEventListener('click', handleTouch);
     }
 
-    // Reanudar AudioContext si está suspendido
     document.addEventListener('click', function() {
       if (audioContext.state === 'suspended') {
         audioContext.resume().then(() => {
@@ -391,13 +401,13 @@
       }
     });
 
-    // Pantalla completa
+    // Evento para alternar pantalla completa
     var fullscreenBtn = document.getElementById('fullscreenBtn');
     fullscreenBtn.addEventListener('click', function(e) {
       var elem = document.getElementById('container');
       if (!document.fullscreenElement) {
         elem.requestFullscreen().then(() => {
-          fullscreenBtn.textContent = "×"; // Indicador para salir
+          fullscreenBtn.textContent = "×";
         }).catch(err => {
           console.error("Error al activar pantalla completa:", err);
         });
