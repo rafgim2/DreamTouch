@@ -31,7 +31,7 @@
       height: 100vh;
       transition: background-color 0.3s ease;
     }
-    /* Interfaz MODO NORMAL */
+    /* MODO NORMAL (interfaz tradicional) */
     #container {
       position: relative;
       display: flex;
@@ -91,9 +91,9 @@
       border-bottom: 1px solid white;
       font-size: 0.8em;
       color: white;
-      user-select: none;
       background-color: black;
       transition: background-color 0.3s ease;
+      user-select: none;
     }
     #dynamicMarkingsContainer > div:last-child {
       border-bottom: none;
@@ -148,7 +148,7 @@
       border: none;
       text-align: center;
     }
-    /* Botón para iniciar AR (minimalista, casi transparente) */
+    /* Botón para iniciar AR (estilo minimalista y casi transparente) */
     #startARBtn {
       background-color: transparent;
       border: 2px solid rgba(0,0,0,0.5);
@@ -247,7 +247,6 @@
     var defaultMidiNote = 60; // C4
     var noteDuration = 3.0;
     var pedalOn = true;
-    var activeNotes = {};
 
     // Estas funciones se asignan a window para usarlas desde el módulo AR.
     window.midiNoteToNoteName = function(midi) {
@@ -525,7 +524,6 @@
 
     // Función para inicializar AR con Three.js y detección de colisiones con la mano completa.
     function iniciarAR() {
-      // Creamos un script módulo dinámico para usar importaciones de Three.js y ARButton.
       var script = document.createElement('script');
       script.type = 'module';
       script.innerHTML = `
@@ -540,7 +538,7 @@
         renderer.xr.enabled = true;
         arContainer.appendChild(renderer.domElement);
 
-        // Crear el ARButton (con opacidad ajustada)
+        // Crear ARButton (con opacidad ajustada)
         const arButton = ARButton.createButton(renderer, {
           requiredFeatures: ['hit-test'],
           sessionInit: { optionalFeatures: ['local-floor','bounded-floor','hand-tracking'] }
@@ -548,12 +546,12 @@
         arButton.style.opacity = '0.8';
         arContainer.appendChild(arButton);
 
-        // Configurar los paneles AR: se colocan con baseY = 0.2 y en z = -0.8.
+        // Configurar paneles AR: baseY se ha ajustado a 0.4 para colocarlos más arriba.
         const numPanels = 6;
         const planeWidth = 1.0;
         const planeHeight = 0.15;
         const spacing = 0.05;
-        const baseY = 0.2;
+        const baseY = 0.4;
         const zPosition = -0.8;
         const planes = [];
         for (let i = 0; i < numPanels; i++) {
@@ -566,42 +564,13 @@
           planes.push(plane);
         }
 
-        // Umbral de colisión en z (en el espacio local del panel).
+        // Umbral para detección de colisión (en coordenadas locales del panel)
         const collisionThreshold = 0.1;
-
-        // Función para revisar si alguno de los joints de la mano toca alguno de los paneles.
-        function checkHandCollisions(hand) {
-          let collisionDetected = false;
-          // Iterar por todos los joints de la mano.
-          for (const joint of Object.values(hand.joints)) {
-            if (joint.visible) {
-              const jointPos = new THREE.Vector3();
-              joint.getWorldPosition(jointPos);
-              // Revisar contra cada panel.
-              for (const panel of planes) {
-                const localPos = panel.worldToLocal(jointPos.clone());
-                if (Math.abs(localPos.x) <= planeWidth/2 &&
-                    Math.abs(localPos.y) <= planeHeight/2 &&
-                    Math.abs(localPos.z) < collisionThreshold) {
-                  collisionDetected = true;
-                  // Si se detecta colisión, dispara el evento para ese panel.
-                  triggerPanelSelect(panel);
-                  // Salir de los bucles para evitar disparos múltiples.
-                  return;
-                }
-              }
-            }
-          }
-          if (!collisionDetected) {
-            window.handSelectActive = false;
-          }
-        }
 
         // Función para disparar el evento de selección para un panel.
         function triggerPanelSelect(panel) {
           if (!window.handSelectActive) {
             window.handSelectActive = true;
-            // Reiniciar colores de todos los paneles.
             planes.forEach(p => p.material.color.set(0x000000));
             const panelIndex = panel.userData.index;
             const maxGain = 1.0;
@@ -609,7 +578,6 @@
             const effectiveGain = minGain + (maxGain - minGain) * ((numPanels - 1 - panelIndex) / (numPanels - 1));
             const randomColor = Math.floor(Math.random() * 0xffffff);
             panel.material.color.set(randomColor);
-            // Disparar el sonido usando funciones globales.
             if (window.notesToPlay.length > 0 && window.currentNoteIndex < window.notesToPlay.length) {
               let groupThreshold = 0.001;
               let groupEnd = window.currentNoteIndex + 1;
@@ -639,28 +607,53 @@
           }
         }
 
-        // Añadir controlador XR (si está disponible) para dispositivos con controlador.
+        // Función para revisar colisiones usando todos los joints de la mano.
+        function checkHandCollisions(hand) {
+          let collisionFound = false;
+          for (const joint of Object.values(hand.joints)) {
+            if (joint.visible) {
+              const jointPos = new THREE.Vector3();
+              joint.getWorldPosition(jointPos);
+              // Revisar colisión contra cada panel
+              for (const panel of planes) {
+                const localPos = panel.worldToLocal(jointPos.clone());
+                if (Math.abs(localPos.x) <= planeWidth/2 &&
+                    Math.abs(localPos.y) <= planeHeight/2 &&
+                    Math.abs(localPos.z) < collisionThreshold) {
+                  collisionFound = true;
+                  triggerPanelSelect(panel);
+                  break;
+                }
+              }
+              if (collisionFound) break;
+            }
+          }
+          if (!collisionFound) {
+            window.handSelectActive = false;
+          }
+        }
+
+        // Añadir controlador XR para dispositivos con controlador (opcional).
         const controller = renderer.xr.getController(0);
         controller.addEventListener('select', () => {
-          // Para controladores se usa el rayo convencional.
           const tempMatrix = new THREE.Matrix4();
           tempMatrix.identity().extractRotation(controller.matrixWorld);
+          const raycaster = new THREE.Raycaster();
           raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
           raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
           const intersects = raycaster.intersectObjects(planes);
           planes.forEach(p => p.material.color.set(0x000000));
           if (intersects.length > 0) {
-            const hit = intersects[0];
-            triggerPanelSelect(hit.object);
+            triggerPanelSelect(intersects[0].object);
           }
         });
         scene.add(controller);
 
-        // Añadir hand tracking.
+        // Añadir objeto hand para hand tracking.
         const hand = renderer.xr.getHand(0);
         scene.add(hand);
 
-        // En cada frame, revisar colisiones entre cualquier joint de la mano y los paneles.
+        // En cada frame, revisar colisiones de la mano.
         renderer.setAnimationLoop(() => {
           if (hand) {
             checkHandCollisions(hand);
