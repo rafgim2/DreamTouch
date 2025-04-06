@@ -207,18 +207,13 @@
     // CONFIGURACIÓN DEL AUDIO
     var audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-    // Creamos dos filtros para "suavizar" el sonido:
-    // Filtro highpass para eliminar frecuencias por debajo de 200 Hz
+    // Filtros para suavizar el sonido:
     var highpass = audioContext.createBiquadFilter();
     highpass.type = "highpass";
     highpass.frequency.value = 200;
-
-    // Filtro lowpass para eliminar frecuencias por encima de 1500 Hz
     var lowpass = audioContext.createBiquadFilter();
     lowpass.type = "lowpass";
     lowpass.frequency.value = 1500;
-
-    // Encadenamos los filtros: highpass -> lowpass -> destino
     highpass.connect(lowpass);
     lowpass.connect(audioContext.destination);
 
@@ -237,31 +232,30 @@
       console.error("No se encontró el método instrument en Soundfont.");
     }
 
-    // Nota por defecto y duración en modo pedal
+    // Nota por defecto
     var defaultMidiNote = 60; // C4
+    // Duración usada en el modo pedal (fade out automático)
     var noteDuration = 3.0;
-
-    // Variable que indica si el pedal está activado o no (por defecto apagado)
+    // Variable que indica si el pedal está activado (por defecto apagado)
     var pedalOn = false;
-
-    // Objeto para almacenar las notas activas en modo sin pedal (clave: pointerId)
+    // Objeto para almacenar las notas activas en modo SIN PEDAL (clave: pointerId o identifier)
     var activeNotes = {};
 
-    // Función para convertir un número MIDI a nota (ej. "C4")
+    // Función para convertir número MIDI a nombre de nota (ej. "C4")
     function midiNoteToNoteName(midi) {
       var octave = Math.floor(midi / 12) - 1;
       var noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
       return noteNames[midi % 12] + octave;
     }
 
-    // Cálculo continuo del gain según la posición vertical
+    // Cálculo del gain según la posición vertical
     function computeEffectiveGain(relativeY) {
       var minGain = 0.15;
       var maxGain = 1.0;
       return minGain + (maxGain - minGain) * (1 - relativeY);
     }
 
-    // Función para reproducir una nota en modo PEDAL ON (funciona como antes)
+    // Reproducción en modo PEDAL ON (comportamiento original)
     function playPianoNote(gain, midiNote) {
       if (pianoInstrument) {
         var noteName = midiNoteToNoteName(midiNote);
@@ -283,13 +277,13 @@
       }
     }
 
-    // Función para reproducir una nota en modo SIN PEDAL (se mantiene hasta detenerse)
+    // Reproducción en modo SIN PEDAL: la nota se mantiene hasta que se detenga manualmente
     function playNoteNonPedal(gain, midiNote) {
       if (pianoInstrument) {
         var noteName = midiNoteToNoteName(midiNote);
         var source = pianoInstrument.play(noteName, audioContext.currentTime, {
           gain: gain,
-          duration: 100, // duración larga
+          duration: 100, // duración larga para mantener la nota
           velocity: gain * 127
         });
         var noteGain = audioContext.createGain();
@@ -317,7 +311,7 @@
       }
     }
 
-    // --- Manejo de eventos para cargar archivo MIDI ---
+    // Cargar archivo MIDI desde input
     document.getElementById('midiFile').addEventListener('change', function(e) {
       document.getElementById('fileName').textContent = e.target.files[0].name;
       var reader = new FileReader();
@@ -332,7 +326,7 @@
       reader.readAsBinaryString(e.target.files[0]);
     });
 
-    // Función para cargar un archivo MIDI desde una URL
+    // Cargar MIDI desde URL
     function loadMidiFromUrl(url, fileName) {
       fetch(url)
         .then(response => response.arrayBuffer())
@@ -352,7 +346,7 @@
         .catch(error => console.error("Error al cargar el MIDI:", error));
     }
 
-    // Cargar el archivo MIDI por defecto usando la URL proporcionada
+    // Cargar MIDI por defecto
     function loadDefaultMidi() {
       const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/Beethoven Para Elisa.mid";
       const defaultFileName = "Beethoven Para Elisa.mid";
@@ -382,7 +376,7 @@
       console.log("Notas MIDI extraídas:", notesToPlay);
     }
 
-    // --- Selector de canciones de muestra ---
+    // Selector de canciones de muestra
     document.getElementById('sampleSongs').addEventListener('change', function() {
       if (this.value) {
         const fileName = this.value;
@@ -396,10 +390,11 @@
       return '#' + Math.floor(Math.random() * 16777215).toString(16);
     }
 
-    // --- Manejo de eventos de toque/puntero ---
+    // Manejo de eventos de toque/puntero
 
     // Al presionar (pointerdown o touchstart)
     function handlePointerDown(e) {
+      // Para evitar múltiples disparos en mouse
       if (e.pointerType === "mouse" && e.buttons !== 1) return;
       var rect = e.currentTarget.getBoundingClientRect();
       var y = e.clientY;
@@ -407,6 +402,8 @@
       var effectiveGain = computeEffectiveGain(relativeY);
       document.body.style.backgroundColor = getRandomColor();
 
+      // Se utiliza un array para almacenar todas las notas activadas con este toque
+      var notesArray = [];
       if (notesToPlay.length > 0 && currentNoteIndex < notesToPlay.length) {
         var groupThreshold = 0.001;
         var groupEnd = currentNoteIndex + 1;
@@ -419,7 +416,7 @@
           if (pedalOn) {
             playPianoNote(effectiveGain, note.noteNumber);
           } else {
-            activeNotes[e.pointerId] = playNoteNonPedal(effectiveGain, note.noteNumber);
+            notesArray.push(playNoteNonPedal(effectiveGain, note.noteNumber));
           }
         }
         currentNoteIndex = groupEnd;
@@ -430,41 +427,49 @@
         if (pedalOn) {
           playPianoNote(effectiveGain, defaultMidiNote);
         } else {
-          activeNotes[e.pointerId] = playNoteNonPedal(effectiveGain, defaultMidiNote);
+          notesArray.push(playNoteNonPedal(effectiveGain, defaultMidiNote));
         }
       }
-    }
-
-    // Al levantar el dedo (pointerup/touchend) se detienen todas las notas activas
-    function handlePointerUp(e) {
+      // Se almacenan todas las notas asociadas al identificador del toque
       if (!pedalOn) {
-        for (var key in activeNotes) {
-          if (activeNotes.hasOwnProperty(key)) {
-            activeNotes[key].stop();
-          }
-        }
-        activeNotes = {};
+        activeNotes[e.pointerId] = notesArray;
       }
     }
 
-    // Asignar eventos para pointer y touch
+    // Al levantar el dedo (pointerup/touchend) se detienen todas las notas activas asociadas
+    function handlePointerUp(e) {
+      if (!pedalOn && activeNotes[e.pointerId]) {
+        activeNotes[e.pointerId].forEach(function(noteObj) {
+          noteObj.stop();
+        });
+        delete activeNotes[e.pointerId];
+      }
+    }
+
+    // Asignar eventos según soporte de PointerEvent
     var touchBox = document.getElementById('touchBox');
     if (window.PointerEvent) {
       touchBox.addEventListener('pointerdown', handlePointerDown);
       touchBox.addEventListener('pointerup', handlePointerUp);
       touchBox.addEventListener('pointercancel', handlePointerUp);
     } else {
+      // Fallback para dispositivos táctiles
       touchBox.addEventListener('touchstart', function(e) {
         e.preventDefault();
-        handlePointerDown(e.changedTouches[0]);
+        var touch = e.changedTouches[0];
+        // Usamos touch.identifier como clave
+        touch.pointerId = touch.identifier;
+        handlePointerDown(touch);
       });
       touchBox.addEventListener('touchend', function(e) {
-        handlePointerUp(e.changedTouches[0]);
+        var touch = e.changedTouches[0];
+        touch.pointerId = touch.identifier;
+        handlePointerUp(touch);
       });
       touchBox.addEventListener('click', handlePointerDown);
     }
 
-    // Reanudar AudioContext si está suspendido
+    // Reanudar AudioContext en caso de suspensión
     document.addEventListener('click', function() {
       if (audioContext.state === 'suspended') {
         audioContext.resume().then(() => {
@@ -496,7 +501,7 @@
       }
     });
 
-    // Botón de Pedal para alternar el modo
+    // Botón de Pedal para alternar modo
     var pedalBtn = document.getElementById('pedalBtn');
     pedalBtn.addEventListener('click', function() {
       pedalOn = !pedalOn;
@@ -504,7 +509,7 @@
       console.log("Pedal:", pedalOn ? "ON" : "OFF");
     });
 
-    // Cargar el MIDI por defecto al iniciar
+    // Cargar MIDI por defecto al iniciar
     window.addEventListener('load', loadDefaultMidi);
   </script>
 </body>
