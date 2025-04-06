@@ -249,7 +249,7 @@
     var pedalOn = true;
     var activeNotes = {};
 
-    // Asignar funciones globales para que el módulo AR pueda usarlas.
+    // Estas funciones se asignan a window para usarlas desde el módulo AR.
     window.midiNoteToNoteName = function(midi) {
       var octave = Math.floor(midi / 12) - 1;
       var noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -520,10 +520,10 @@
       iniciarAR();
     });
 
-    // Bandera para evitar disparos continuos del hand tracking
+    // Bandera para evitar disparos continuos con hand tracking.
     window.handSelectActive = false;
 
-    // Función para inicializar AR con Three.js y detección de hand tracking (usando el índice)
+    // Función para inicializar AR con Three.js y detección de hand tracking (usando el dedo índice)
     function iniciarAR() {
       // Creamos un script módulo dinámico para usar importaciones de Three.js y ARButton
       var script = document.createElement('script');
@@ -548,30 +548,34 @@
         arButton.style.opacity = '0.8';
         arContainer.appendChild(arButton);
 
-        // Configurar los paneles AR (reposicionados un poco más arriba, con baseY = 0.3)
+        // Configurar los paneles AR.
+        // Se colocan más cerca (z = -0.8) y ahora más arriba: baseY = 0.2
         const numPanels = 6;
         const planeWidth = 1.0;
         const planeHeight = 0.15;
         const spacing = 0.05;
-        const baseY = 0.3;
+        const baseY = 0.2;
         const zPosition = -0.8;
         const planes = [];
         for (let i = 0; i < numPanels; i++) {
           const geometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
           const material = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.DoubleSide });
           const plane = new THREE.Mesh(geometry, material);
+          // Ubicar los paneles en Y de forma escalonada
           plane.position.set(0, baseY - i * (planeHeight + spacing), zPosition);
+          // Guardar el índice en userData para mapear el gain
           plane.userData.index = i;
           scene.add(plane);
           planes.push(plane);
         }
 
-        // Raycaster y matriz temporal para el controlador
+        // Raycaster para detección de intersección.
         const raycaster = new THREE.Raycaster();
-        const tempMatrix = new THREE.Matrix4();
 
-        // Función de selección (para controlador)
+        // Función de selección para controlador.
         function onSelect() {
+          // Usar la dirección del controlador (como antes)
+          const tempMatrix = new THREE.Matrix4();
           tempMatrix.identity().extractRotation(controller.matrixWorld);
           raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
           raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
@@ -585,6 +589,7 @@
             const effectiveGain = minGain + (maxGain - minGain) * ((numPanels - 1 - panelIndex) / (numPanels - 1));
             const randomColor = Math.floor(Math.random() * 0xffffff);
             hit.object.material.color.set(randomColor);
+            // Disparar sonido usando funciones globales
             if (window.notesToPlay.length > 0 && window.currentNoteIndex < window.notesToPlay.length) {
               let groupThreshold = 0.001;
               let groupEnd = window.currentNoteIndex + 1;
@@ -614,68 +619,71 @@
           }
         }
 
-        // Añadir controlador XR (para dispositivos con controlador)
+        // Añadir controlador XR para dispositivos con controlador
         const controller = renderer.xr.getController(0);
         controller.addEventListener('select', onSelect);
         scene.add(controller);
 
-        // Añadir hand tracking usando hand.get() para obtener joints
+        // Añadir hand tracking: se usará la posición del dedo índice.
         const hand = renderer.xr.getHand(0);
         scene.add(hand);
 
-        // Función para detectar intersección usando el dedo índice del hand tracking
+        // Función para chequear intersección usando la posición del dedo índice.
         function checkHandIntersections() {
-          const indexTip = hand.get('index-finger-tip');
-          const wrist = hand.get('wrist');
-          if (indexTip && wrist) {
-            const tipPos = new THREE.Vector3().setFromMatrixPosition(indexTip.matrixWorld);
-            const wristPos = new THREE.Vector3().setFromMatrixPosition(wrist.matrixWorld);
-            const direction = new THREE.Vector3().subVectors(tipPos, wristPos).normalize();
-            raycaster.set(tipPos, direction);
+          // Intentar obtener la posición mundial del dedo índice.
+          if (hand && hand.joints && hand.joints["index-finger-tip"]) {
+            const tipPos = new THREE.Vector3();
+            hand.joints["index-finger-tip"].getWorldPosition(tipPos);
+            // Usar la dirección de la cámara para el rayo (puede ajustarse según necesidad).
+            const rayDir = new THREE.Vector3();
+            camera.getWorldDirection(rayDir);
+            raycaster.set(tipPos, rayDir);
             const intersects = raycaster.intersectObjects(planes);
-            if (intersects.length > 0 && !window.handSelectActive) {
-              window.handSelectActive = true;
-              planes.forEach(p => p.material.color.set(0x000000));
-              const hit = intersects[0];
-              const panelIndex = hit.object.userData.index;
-              const maxGain = 1.0;
-              const minGain = 0.15;
-              const effectiveGain = minGain + (maxGain - minGain) * ((numPanels - 1 - panelIndex) / (numPanels - 1));
-              const randomColor = Math.floor(Math.random() * 0xffffff);
-              hit.object.material.color.set(randomColor);
-              if (window.notesToPlay.length > 0 && window.currentNoteIndex < window.notesToPlay.length) {
-                let groupThreshold = 0.001;
-                let groupEnd = window.currentNoteIndex + 1;
-                while (groupEnd < window.notesToPlay.length &&
-                       Math.abs(window.notesToPlay[groupEnd].time - window.notesToPlay[window.currentNoteIndex].time) < groupThreshold) {
-                  groupEnd++;
-                }
-                for (let i = window.currentNoteIndex; i < groupEnd; i++) {
-                  let note = window.notesToPlay[i];
+            if (intersects.length > 0) {
+              if (!window.handSelectActive) {
+                window.handSelectActive = true;
+                planes.forEach(p => p.material.color.set(0x000000));
+                const hit = intersects[0];
+                const panelIndex = hit.object.userData.index;
+                const maxGain = 1.0;
+                const minGain = 0.15;
+                const effectiveGain = minGain + (maxGain - minGain) * ((numPanels - 1 - panelIndex) / (numPanels - 1));
+                const randomColor = Math.floor(Math.random() * 0xffffff);
+                hit.object.material.color.set(randomColor);
+                if (window.notesToPlay.length > 0 && window.currentNoteIndex < window.notesToPlay.length) {
+                  let groupThreshold = 0.001;
+                  let groupEnd = window.currentNoteIndex + 1;
+                  while (groupEnd < window.notesToPlay.length &&
+                         Math.abs(window.notesToPlay[groupEnd].time - window.notesToPlay[window.currentNoteIndex].time) < groupThreshold) {
+                    groupEnd++;
+                  }
+                  for (let i = window.currentNoteIndex; i < groupEnd; i++) {
+                    let note = window.notesToPlay[i];
+                    if (window.pedalOn) {
+                      window.playPianoNote(effectiveGain, note.noteNumber);
+                    } else {
+                      window.playNoteNonPedal(effectiveGain, note.noteNumber);
+                    }
+                  }
+                  window.currentNoteIndex = groupEnd;
+                  if (window.currentNoteIndex >= window.notesToPlay.length) {
+                    window.currentNoteIndex = 0;
+                  }
+                } else {
                   if (window.pedalOn) {
-                    window.playPianoNote(effectiveGain, note.noteNumber);
+                    window.playPianoNote(effectiveGain, window.defaultMidiNote);
                   } else {
-                    window.playNoteNonPedal(effectiveGain, note.noteNumber);
+                    window.playNoteNonPedal(effectiveGain, window.defaultMidiNote);
                   }
                 }
-                window.currentNoteIndex = groupEnd;
-                if (window.currentNoteIndex >= window.notesToPlay.length) {
-                  window.currentNoteIndex = 0;
-                }
-              } else {
-                if (window.pedalOn) {
-                  window.playPianoNote(effectiveGain, window.defaultMidiNote);
-                } else {
-                  window.playNoteNonPedal(effectiveGain, window.defaultMidiNote);
-                }
               }
-            } else if (intersects.length === 0) {
+            } else {
               window.handSelectActive = false;
             }
           }
         }
 
-        // En cada frame se chequea el input del hand tracking
+        // En cada frame, chequear intersección usando el dedo índice.
         renderer.setAnimationLoop(() => {
           checkHandIntersections();
           renderer.render(scene, camera);
