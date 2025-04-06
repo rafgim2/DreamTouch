@@ -44,7 +44,7 @@
       margin-top: -10px;
       font-size: 0.9em;
     }
-    /* Cuadro de toque: fondo negro, dividido en 6 franjas iguales */
+    /* Cuadro de toque: fondo negro, dividido visualmente en 6 franjas iguales mediante líneas horizontales */
     #touchBox {
       width: 100%;
       height: 400px;
@@ -53,7 +53,7 @@
       display: flex;
       flex-direction: column;
     }
-    /* Contenedor para la regla de dinámica: franjas horizontales con nombres completos, en blanco y sin selección de texto */
+    /* Franjas de la regla de dinámica: ahora con nombres completos en blanco y sin posibilidad de selección */
     #dynamicMarkingsContainer {
       width: 100%;
       height: 100%;
@@ -74,9 +74,9 @@
     #dynamicMarkingsContainer > div:last-child {
       border-bottom: none;
     }
-    /* Controles inferiores: se separan más verticalmente */
+    /* Controles inferiores: mayor separación vertical */
     #buttons {
-      margin-top: 20px;
+      margin-top: 40px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -174,10 +174,10 @@
     var audioContext = new (window.AudioContext || window.webkitAudioContext)();
     var pianoInstrument = null;
     if (window.Soundfont && typeof window.Soundfont.instrument === 'function') {
-      // Usamos la URL raw de GitHub y especificamos el formato 'sf2'
+      // Usamos la URL raw y especificamos el formato 'sf2'
       window.Soundfont.instrument(
         audioContext,
-        'https://github.com/rafgim2/PRUEBAS/raw/refs/heads/main/GeneralUser%20GS%20XG%20v1.471.sf2',
+        'https://raw.githubusercontent.com/rafgim2/PRUEBAS/main/GeneralUser%20GS%20XG%20v1.471.sf2',
         { format: 'sf2' }
       ).then(function(piano) {
           pianoInstrument = piano;
@@ -201,8 +201,14 @@
       return noteNames[midi % 12] + octave;
     }
     
-    // Arreglo de gain para cada nivel dinámico (de arriba a abajo: Fortissimo a Pianissimo)
-    var gainLevels = [1.0, 0.8, 0.65, 0.5, 0.35, 0.15];
+    // Usamos una fórmula continua para calcular el gain:
+    // gain = minGain + (maxGain - minGain) * (1 - relativeY)
+    // Donde minGain = 0.15 y maxGain = 1.0.
+    function computeEffectiveGain(relativeY) {
+      var minGain = 0.15;
+      var maxGain = 1.0;
+      return minGain + (maxGain - minGain) * (1 - relativeY);
+    }
     
     // Función para reproducir nota usando soundfont-player.
     function playPianoNote(gain, midiNote) {
@@ -299,10 +305,9 @@
       var rect = e.currentTarget.getBoundingClientRect();
       var y = (e.touches && e.touches.length > 0) ? e.touches[0].clientY : e.clientY;
       var relativeY = (y - rect.top) / rect.height;
-      // Determinar en qué franja se encuentra (0 a 5)
-      var stripeIndex = Math.floor(relativeY * 6);
-      if (stripeIndex >= 6) stripeIndex = 5;
-      var effectiveGain = gainLevels[stripeIndex];
+      // Calcular el gain de forma continua según la posición
+      var effectiveGain = computeEffectiveGain(relativeY);
+      console.log("relativeY:", relativeY, "effectiveGain:", effectiveGain);
       
       // Cambiar el fondo del body a un color aleatorio
       document.body.style.backgroundColor = getRandomColor();
