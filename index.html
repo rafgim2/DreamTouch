@@ -203,7 +203,7 @@
           <option value="Beethoven Para Elisa.mid">Beethoven Para Elisa.mid</option>
           <option value="Beethoven Patética.mid">Beethoven - Patética.mid</option>
           <option value="Handel & Halvorsen Passacaglia.mid">Handel & Halvorsen - Passacaglia.mid</option>
-          <option value="R.Korsakov El vuelo del moscardón.mid">R.Korsakov - El vuelo del moscardón.mid</option>
+          <option value="R.Korsakov El vuelo del moscardón.mid">R-Korsakov - El vuelo del moscardón.mid</option>
           <option value="Rachmaninoff Concert nº2 Tercer mov.mid">Rachmaninoff - Concert nº2 Tercer mov.mid</option>
           <option value="Satie Gymnopedie n1.mid">Satie - Gymnopedie n1.mid</option>
         </select>
@@ -537,7 +537,7 @@
         renderer.xr.enabled = true;
         arContainer.appendChild(renderer.domElement);
 
-        // Crear el ARButton (con estilo por defecto y opacidad ajustada)
+        // Crear el ARButton (se muestra el botón por defecto con opacidad ajustada)
         const arButton = ARButton.createButton(renderer, {
           requiredFeatures: ['hit-test'],
           sessionInit: { optionalFeatures: ['local-floor','bounded-floor','hand-tracking'] }
@@ -545,30 +545,33 @@
         arButton.style.opacity = '0.8';
         arContainer.appendChild(arButton);
 
-        // Constantes para los paneles AR
+        // Configurar los paneles AR:
+        // Se colocan más cerca (z = -0.8) y más abajo (posición Y negativa).
         const numPanels = 6;
         const planeWidth = 1.0;
         const planeHeight = 0.15;
         const spacing = 0.05;
-        const totalHeight = numPanels * planeHeight + (numPanels - 1) * spacing;
-        let startY = totalHeight / 2 - planeHeight / 2;
+        // Para ubicarlos más bajos, definimos un valor base negativo
+        const baseY = -0.3;
+        const zPosition = -0.8;
         const planes = [];
         for (let i = 0; i < numPanels; i++) {
           const geometry = new THREE.PlaneGeometry(planeWidth, planeHeight);
           const material = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.DoubleSide });
           const plane = new THREE.Mesh(geometry, material);
-          plane.position.set(0, startY - i * (planeHeight + spacing), -1.5);
+          // Ubicar los paneles en Y de forma escalonada
+          plane.position.set(0, baseY - i * (planeHeight + spacing), zPosition);
           // Guardar el índice en userData para mapear el gain
           plane.userData.index = i;
           scene.add(plane);
           planes.push(plane);
         }
 
-        // Raycaster y matriz temporal para el controlador
+        // Raycaster y matriz temporal para determinar la dirección
         const raycaster = new THREE.Raycaster();
         const tempMatrix = new THREE.Matrix4();
 
-        // Función que se dispara al seleccionar (por controlador o toque)
+        // Función que se dispara al seleccionar un panel (por controlador o por hand tracking)
         function onSelect() {
           tempMatrix.identity().extractRotation(controller.matrixWorld);
           raycaster.ray.origin.setFromMatrixPosition(controller.matrixWorld);
@@ -581,7 +584,7 @@
             // Obtener el índice del panel
             const panelIndex = hit.object.userData.index;
             // Mapear el índice a un effectiveGain:
-            // Panel 0 (arriba) => gain máximo, panel 5 (abajo) => gain mínimo.
+            // Panel 0 (más alto) => gain máximo, panel 5 (más bajo) => gain mínimo.
             const maxGain = 1.0;
             const minGain = 0.15;
             const effectiveGain = minGain + (maxGain - minGain) * ((numPanels - 1 - panelIndex) / (numPanels - 1));
@@ -619,10 +622,17 @@
           }
         }
 
-        // Añadir controlador XR y asociar el evento "select"
+        // Añadir controlador XR para dispositivos con controlador
         const controller = renderer.xr.getController(0);
         controller.addEventListener('select', onSelect);
         scene.add(controller);
+
+        // Añadir también el input de hand tracking (si está disponible)
+        const hand = renderer.xr.getHand(0);
+        // Se asocian ambos eventos: "select" y "selectstart"
+        hand.addEventListener('select', onSelect);
+        hand.addEventListener('selectstart', onSelect);
+        scene.add(hand);
 
         // Botón para salir de AR (EXIT AR)
         const exitBtn = document.createElement('button');
