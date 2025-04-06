@@ -8,7 +8,7 @@
   <script>
     window.require = function() {};
   </script>
-  <!-- Scripts MIDI y Soundfont -->
+  <!-- Scripts MIDI y soundfont -->
   <script src="https://cdn.jsdelivr.net/npm/webmidiapishim"></script>
   <script src="https://cdn.jsdelivr.net/npm/webmidi@2"></script>
   <script src="https://cdn.jsdelivr.net/gh/gasman/jasmid@master/stream.js"></script>
@@ -16,153 +16,77 @@
   <script src="https://cdn.jsdelivr.net/npm/soundfont-player@0.12.0/dist/soundfont-player.min.js"></script>
   <style>
     /* Estilos generales y de la interfaz normal */
-    html {
-      transform: scale(0.9);
-      transform-origin: top center;
-    }
+    html { transform: scale(0.9); transform-origin: top center; }
     body {
       background-color: #FFFFFF;
-      margin: 0;
-      overflow: hidden;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-      transition: background-color 0.3s ease;
+      margin: 0; overflow: hidden;
+      display: flex; justify-content: center; align-items: center;
+      height: 100vh; transition: background-color 0.3s ease;
     }
     /* Interfaz NORMAL de DreamTouch */
     #container {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      border: 6px solid black;
-      padding: 30px;
-      background-color: #FFFFFF;
-      color: black;
-      width: 350px;
-      box-sizing: border-box;
+      position: relative; display: flex; flex-direction: column; align-items: center;
+      border: 6px solid black; padding: 30px;
+      background-color: #FFFFFF; color: black; width: 350px; box-sizing: border-box;
     }
-    h1 {
-      margin: 0 0 20px 0;
-      font-size: 2.8em;
-      text-align: center;
-    }
+    h1 { margin: 0 0 20px 0; font-size: 2.8em; text-align: center; }
     #copyright {
-      margin-bottom: 20px;
-      margin-top: -20px;
-      font-size: 0.9em;
-      color: blue;
+      margin-bottom: 20px; margin-top: -20px; font-size: 0.9em; color: blue;
     }
     #fullscreenBtn {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background: rgba(0,0,0,0.5);
-      border: none;
-      color: white;
-      padding: 5px 10px;
-      font-size: 1em;
-      cursor: pointer;
-      z-index: 10;
+      position: absolute; top: 10px; right: 10px;
+      background: rgba(0,0,0,0.5); border: none; color: white;
+      padding: 5px 10px; font-size: 1em; cursor: pointer; z-index: 10;
     }
+    /* Área de toque: 6 franjas */
     #touchBox {
-      width: 100%;
-      height: 400px;
-      background-color: black;
-      display: flex;
-      flex-direction: column;
-      position: relative;
+      width: 100%; height: 400px; background-color: black;
+      display: flex; flex-direction: column; position: relative;
     }
     #dynamicMarkingsContainer {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      user-select: none;
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column; user-select: none;
     }
     #dynamicMarkingsContainer > div {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-bottom: 1px solid white;
-      font-size: 0.8em;
-      color: white;
-      background-color: black;
-      transition: background-color 0.3s ease;
-      user-select: none;
+      flex: 1; display: flex; align-items: center; justify-content: center;
+      border-bottom: 1px solid white; font-size: 0.8em; color: white;
+      background-color: black; transition: background-color 0.3s ease; user-select: none;
     }
-    #dynamicMarkingsContainer > div:last-child {
-      border-bottom: none;
-    }
+    #dynamicMarkingsContainer > div:last-child { border-bottom: none; }
+    /* Controles inferiores */
     #buttons {
-      margin-top: 40px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 10px;
-      width: 100%;
+      margin-top: 40px; display: flex; flex-direction: column;
+      align-items: center; gap: 10px; width: 100%;
     }
     #loadButton {
-      background-color: #90EE90;
-      color: black;
-      padding: 10px 20px;
-      font-size: 1em;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
+      background-color: #90EE90; color: black;
+      padding: 10px 20px; font-size: 1em; border: none; border-radius: 5px; cursor: pointer;
     }
     #pedalBtn {
-      background-color: #90EE90;
-      color: black;
-      padding: 5px 10px;
-      font-size: 0.9em;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
+      background-color: #90EE90; color: black;
+      padding: 5px 10px; font-size: 0.9em; border: none; border-radius: 5px; cursor: pointer;
     }
     #midiFile { display: none; }
-    #fileName {
-      font-style: italic;
-      margin-top: -10px;
-      color: black;
-    }
+    #fileName { font-style: italic; margin-top: -10px; color: black; }
     #sampleSongsContainer {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 5px;
-      width: 100%;
+      display: flex; flex-direction: column; align-items: center; gap: 5px; width: 100%;
     }
     #sampleSongs {
-      padding: 5px;
-      font-size: 0.8em;
-      border-radius: 5px;
-      margin-bottom: 20px;
-      border: none;
-      text-align: center;
+      padding: 5px; font-size: 0.8em; border-radius: 5px;
+      margin-bottom: 20px; border: none; text-align: center;
     }
-    /* Botón para iniciar AR (minimalista, casi transparente) */
+    /* Botón para iniciar AR (único botón) */
     #startARBtn {
       background-color: transparent;
       border: 2px solid rgba(0,0,0,0.5);
       color: rgba(0,0,0,0.7);
-      padding: 10px 20px;
-      font-size: 1em;
-      border-radius: 5px;
-      cursor: pointer;
+      padding: 10px 20px; font-size: 1em; border-radius: 5px; cursor: pointer;
       margin-top: 10px;
     }
     /* Contenedor para modo AR (inicialmente oculto) */
     #arContainer {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      display: none;
-      z-index: 20;
+      position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%; display: none; z-index: 20;
     }
   </style>
 </head>
@@ -208,7 +132,7 @@
     </div>
   </div>
 
-  <!-- Contenedor para modo AR (se muestra al iniciar AR) -->
+  <!-- Contenedor para modo AR -->
   <div id="arContainer"></div>
 
   <script>
@@ -231,9 +155,7 @@
           pianoInstrument = piano;
           console.log("Instrumento Acoustic Grand Piano cargado.");
         })
-        .catch(function(error) {
-          console.error("Error al cargar el instrumento:", error);
-        });
+        .catch(function(error) { console.error("Error al cargar el instrumento:", error); });
     } else {
       console.error("No se encontró el método instrument en Soundfont.");
     }
@@ -242,10 +164,10 @@
     var pedalOn = true;
     window.handSelectActive = false; // Bandera para evitar disparos continuos
 
-    // Funciones globales para uso en AR
+    // Funciones globales para el modo AR.
     window.midiNoteToNoteName = function(midi) {
       var octave = Math.floor(midi / 12) - 1;
-      var noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
+      var noteNames = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
       return noteNames[midi % 12] + octave;
     };
     window.computeEffectiveGain = function(relativeY) {
@@ -264,9 +186,7 @@
         noteGain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 3);
         noteGain.connect(highpass);
         console.log("Nota reproducida (PEDAL ON):", noteName, "gain:", gain);
-      } else {
-        console.warn("El instrumento aún no se ha cargado.");
-      }
+      } else { console.warn("El instrumento aún no se ha cargado."); }
     };
     window.playNoteNonPedal = function(gain, midiNote) {
       if (pianoInstrument) {
@@ -284,9 +204,7 @@
           noteGain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 0.2);
           setTimeout(function(){ if (source.stop) { source.stop(); } }, 250);
         }};
-      } else {
-        console.warn("El instrumento aún no se ha cargado.");
-      }
+      } else { console.warn("El instrumento aún no se ha cargado."); }
     };
 
     document.getElementById('midiFile').addEventListener('change', function(e) {
@@ -296,9 +214,7 @@
         try {
           var midi = new MidiFile(e.target.result);
           extractNotesFromMidi(midi);
-        } catch (error) {
-          console.error("Error al parsear el archivo MIDI:", error);
-        }
+        } catch (error) { console.error("Error al parsear el archivo MIDI:", error); }
       };
       reader.readAsBinaryString(e.target.files[0]);
     });
@@ -312,9 +228,7 @@
             try {
               var midi = new MidiFile(e.target.result);
               extractNotesFromMidi(midi);
-            } catch (error) {
-              console.error("Error al parsear el archivo MIDI:", error);
-            }
+            } catch (error) { console.error("Error al parsear el archivo MIDI:", error); }
           };
           reader.readAsBinaryString(new Blob([data]));
           document.getElementById('fileName').textContent = fileName;
@@ -372,7 +286,9 @@
         var groupThreshold = 0.001;
         var groupEnd = currentNoteIndex + 1;
         while (groupEnd < notesToPlay.length &&
-               Math.abs(notesToPlay[groupEnd].time - notesToPlay[currentNoteIndex].time) < groupThreshold) { groupEnd++; }
+               Math.abs(notesToPlay[groupEnd].time - notesToPlay[currentNoteIndex].time) < groupThreshold) {
+          groupEnd++;
+        }
         for (var i = currentNoteIndex; i < groupEnd; i++) {
           var note = notesToPlay[i];
           if (pedalOn) { window.playPianoNote(effectiveGain, note.noteNumber); }
@@ -395,13 +311,7 @@
       touchBox.addEventListener('touchstart', function(e) {
         e.preventDefault();
         Array.from(e.changedTouches).forEach(function(touch) {
-          var fakeEvent = {
-            clientY: touch.clientY,
-            currentTarget: e.currentTarget,
-            pointerId: "touch-" + touch.identifier,
-            pointerType: "touch",
-            target: e.target
-          };
+          var fakeEvent = { clientY: touch.clientY, currentTarget: e.currentTarget, pointerId: "touch-" + touch.identifier, pointerType: "touch", target: e.target };
           handlePointerDown(fakeEvent);
         });
       });
@@ -451,7 +361,7 @@
       iniciarAR();
     });
 
-    // Función para inicializar AR con detección de colisiones usando toda la mano
+    // Función para inicializar AR con hand tracking (usando xrFrame.getJointPose)
     function iniciarAR() {
       var script = document.createElement('script');
       script.type = 'module';
@@ -467,24 +377,21 @@
         renderer.xr.enabled = true;
         arContainer.appendChild(renderer.domElement);
 
-        // Crear y reubicar ARButton (se elimina cualquier botón previo)
+        // Crear ARButton y reubicarlo (sin añadir botones extra en la escena)
         const arButton = ARButton.createButton(renderer, {
-          requiredFeatures: ['hit-test'],
-          sessionInit: { optionalFeatures: ['local-floor','bounded-floor','hand-tracking'] }
+          requiredFeatures: ['hit-test', 'hand-tracking'],
+          sessionInit: { optionalFeatures: ['local-floor','bounded-floor'] }
         });
         arButton.style.opacity = '0.8';
-        // Reubicar el botón: lo posicionamos en la parte inferior central
         arButton.style.position = 'absolute';
         arButton.style.bottom = '20px';
         arButton.style.left = '50%';
         arButton.style.transform = 'translateX(-50%)';
-        // Asegurarse de que solo aparezca este botón
-        if (arButton.parentNode) {
-          arButton.parentNode.removeChild(arButton);
-        }
+        // Removemos cualquier otro ARButton previo
+        if (arButton.parentNode) { arButton.parentNode.removeChild(arButton); }
         arContainer.appendChild(arButton);
 
-        // Configurar paneles AR: se posicionan con baseY = 0.4 y z = -0.8.
+        // Configurar paneles AR: baseY = 0.4, z = -0.8.
         const numPanels = 6;
         const planeWidth = 1.0;
         const planeHeight = 0.15;
@@ -502,74 +409,87 @@
           planes.push(plane);
         }
 
-        // En cada frame usaremos xrFrame para obtener inputSources con hand tracking.
-        renderer.setAnimationLoop((timestamp, xrFrame) => {
-          // Si hay sesión activa, revisar inputSources.
+        // Obtener la referencia de espacio XR
+        const refSpace = renderer.xr.getReferenceSpace();
+
+        // Función que revisa, para cada inputSource con hand, el jointPose del "index-finger-tip"
+        function checkHandCollisions(xrFrame) {
           const session = renderer.xr.getSession();
-          if (session && xrFrame) {
-            for (const inputSource of session.inputSources) {
-              if (inputSource.hand) {
-                // Recorrer todos los joints de la mano.
-                for (const joint of Object.values(inputSource.hand)) {
-                  // Obtener la posición mundial del joint.
-                  if (joint.visible) {
-                    const jointPos = new THREE.Vector3();
-                    joint.getWorldPosition(jointPos);
-                    // Revisar colisión contra cada panel:
-                    for (const panel of planes) {
-                      const localPos = panel.worldToLocal(jointPos.clone());
-                      if (Math.abs(localPos.x) <= planeWidth/2 &&
-                          Math.abs(localPos.y) <= planeHeight/2 &&
-                          Math.abs(localPos.z) < 0.1) {
-                        if (!window.handSelectActive) {
-                          window.handSelectActive = true;
-                          planes.forEach(p => p.material.color.set(0x000000));
-                          const panelIndex = panel.userData.index;
-                          const maxGain = 1.0, minGain = 0.15;
-                          const effectiveGain = minGain + (maxGain - minGain) * ((numPanels - 1 - panelIndex) / (numPanels - 1));
-                          const randomColor = Math.floor(Math.random() * 0xffffff);
-                          panel.material.color.set(randomColor);
-                          if (window.notesToPlay.length > 0 && window.currentNoteIndex < window.notesToPlay.length) {
-                            let groupThreshold = 0.001;
-                            let groupEnd = window.currentNoteIndex + 1;
-                            while (groupEnd < window.notesToPlay.length &&
-                                   Math.abs(window.notesToPlay[groupEnd].time - window.notesToPlay[window.currentNoteIndex].time) < groupThreshold) {
-                              groupEnd++;
-                            }
-                            for (let i = window.currentNoteIndex; i < groupEnd; i++) {
-                              let note = window.notesToPlay[i];
-                              if (window.pedalOn) {
-                                window.playPianoNote(effectiveGain, note.noteNumber);
-                              } else {
-                                window.playNoteNonPedal(effectiveGain, note.noteNumber);
-                              }
-                            }
-                            window.currentNoteIndex = groupEnd;
-                            if (window.currentNoteIndex >= window.notesToPlay.length) {
-                              window.currentNoteIndex = 0;
-                            }
-                          } else {
+          if (!session) return;
+          for (const inputSource of session.inputSources) {
+            if (inputSource.hand) {
+              const indexTip = inputSource.hand.get('index-finger-tip');
+              if (indexTip) {
+                const jointPose = xrFrame.getJointPose(indexTip, refSpace);
+                if (jointPose) {
+                  const tipPos = new THREE.Vector3(
+                    jointPose.transform.position.x,
+                    jointPose.transform.position.y,
+                    jointPose.transform.position.z
+                  );
+                  // Revisar colisión con cada panel
+                  for (const panel of planes) {
+                    const localPos = panel.worldToLocal(tipPos.clone());
+                    if (Math.abs(localPos.x) <= planeWidth / 2 &&
+                        Math.abs(localPos.y) <= planeHeight / 2 &&
+                        Math.abs(localPos.z) < 0.1) {
+                      if (!window.handSelectActive) {
+                        window.handSelectActive = true;
+                        planes.forEach(p => p.material.color.set(0x000000));
+                        const panelIndex = panel.userData.index;
+                        const maxGain = 1.0, minGain = 0.15;
+                        const effectiveGain = minGain + (maxGain - minGain) * ((numPanels - 1 - panelIndex) / (numPanels - 1));
+                        const randomColor = Math.floor(Math.random() * 0xffffff);
+                        panel.material.color.set(randomColor);
+                        // Disparar sonido
+                        if (window.notesToPlay.length > 0 && window.currentNoteIndex < window.notesToPlay.length) {
+                          let groupThreshold = 0.001;
+                          let groupEnd = window.currentNoteIndex + 1;
+                          while (groupEnd < window.notesToPlay.length &&
+                                 Math.abs(window.notesToPlay[groupEnd].time - window.notesToPlay[window.currentNoteIndex].time) < groupThreshold) {
+                            groupEnd++;
+                          }
+                          for (let i = window.currentNoteIndex; i < groupEnd; i++) {
+                            let note = window.notesToPlay[i];
                             if (window.pedalOn) {
-                              window.playPianoNote(effectiveGain, window.defaultMidiNote);
+                              window.playPianoNote(effectiveGain, note.noteNumber);
                             } else {
-                              window.playNoteNonPedal(effectiveGain, window.defaultMidiNote);
+                              window.playNoteNonPedal(effectiveGain, note.noteNumber);
                             }
                           }
+                          window.currentNoteIndex = groupEnd;
+                          if (window.currentNoteIndex >= window.notesToPlay.length) {
+                            window.currentNoteIndex = 0;
+                          }
+                        } else {
+                          if (window.pedalOn) {
+                            window.playPianoNote(effectiveGain, window.defaultMidiNote);
+                          } else {
+                            window.playNoteNonPedal(effectiveGain, window.defaultMidiNote);
+                          }
                         }
-                        break;
                       }
+                      return; // Si se detecta una colisión, salir
+                    } else {
+                      window.handSelectActive = false;
                     }
                   }
                 }
-              } else {
-                window.handSelectActive = false;
               }
             }
           }
+        }
+
+        // Animación: usamos la firma (timestamp, xrFrame)
+        renderer.setAnimationLoop((timestamp, xrFrame) => {
+          if (xrFrame) {
+            checkHandCollisions(xrFrame);
+          }
           renderer.render(scene, camera);
         });
+
         window.addEventListener('resize', () => {
-          camera.aspect = window.innerWidth/window.innerHeight;
+          camera.aspect = window.innerWidth / window.innerHeight;
           camera.updateProjectionMatrix();
           renderer.setSize(window.innerWidth, window.innerHeight);
         });
