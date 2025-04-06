@@ -95,6 +95,8 @@
       font-size: 0.8em;
       color: white;
       user-select: none;
+      background-color: black;
+      transition: background-color 0.3s ease;
     }
     #dynamicMarkingsContainer > div:last-child {
       border-bottom: none;
@@ -395,6 +397,7 @@
       // Evitar múltiples disparos con mouse
       if (e.pointerType === "mouse" && e.buttons !== 1) return;
       
+      // Obtener posición y calcular gain
       var rect = e.currentTarget.getBoundingClientRect();
       var y = e.clientY;
       var relativeY = (y - rect.top) / rect.height;
@@ -404,14 +407,26 @@
       var randomColor = getRandomColor();
       document.body.style.backgroundColor = randomColor;
       
-      // Obtener el contenedor de la franja de matiz y alternar su color
-      var dynamicMarkings = document.getElementById('dynamicMarkingsContainer');
-      if (!dynamicMarkings.style.backgroundColor || dynamicMarkings.style.backgroundColor === 'black') {
-        dynamicMarkings.style.backgroundColor = randomColor;
+      // Determinar cuál fila (dentro de #dynamicMarkingsContainer) fue tocada
+      var dynamicContainer = document.getElementById('dynamicMarkingsContainer');
+      var containerRect = dynamicContainer.getBoundingClientRect();
+      var relativeYInContainer = (e.clientY - containerRect.top) / containerRect.height;
+      var rows = dynamicContainer.children;
+      var rowIndex = Math.floor(relativeYInContainer * rows.length);
+      // Asegurarse de que el índice esté dentro del rango
+      if (rowIndex < 0 || rowIndex >= rows.length) {
+        rowIndex = 0;
+      }
+      var row = rows[rowIndex];
+      
+      // Alternar el color de la fila: si es negro, asignarle el color aleatorio; de lo contrario, restaurarlo a negro.
+      if (!row.style.backgroundColor || row.style.backgroundColor === 'black') {
+        row.style.backgroundColor = randomColor;
       } else {
-        dynamicMarkings.style.backgroundColor = 'black';
+        row.style.backgroundColor = 'black';
       }
       
+      // Reproducir nota(s)
       var notesArray = [];
       if (notesToPlay.length > 0 && currentNoteIndex < notesToPlay.length) {
         var groupThreshold = 0.001;
