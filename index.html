@@ -47,7 +47,7 @@
     }
     h1 {
       margin: 0 0 20px 0;
-      font-size: 3em;
+      font-size: 2.8em;
       text-align: center;
     }
     #copyright {
@@ -395,59 +395,35 @@
     }
 
     // Manejo de eventos de toque/puntero
-
-    // Al presionar (pointerdown o touchstart)
     function handlePointerDown(e) {
-      // Evitar múltiples disparos con mouse
       if (e.pointerType === "mouse" && e.buttons !== 1) return;
-      // Comentamos estas líneas para evitar problemas con toques rápidos
-      // if (e.target.setPointerCapture) {
-      //   e.target.setPointerCapture(e.pointerId);
-      // }
+      // Se elimina el uso de pointer capture para evitar problemas con toques rápidos
+
       var rect = e.currentTarget.getBoundingClientRect();
       var y = e.clientY;
       var relativeY = (y - rect.top) / rect.height;
       var effectiveGain = computeEffectiveGain(relativeY);
       document.body.style.backgroundColor = getRandomColor();
 
-      var notesArray = [];
-      if (notesToPlay.length > 0 && currentNoteIndex < notesToPlay.length) {
-        var groupThreshold = 0.001;
-        var groupEnd = currentNoteIndex + 1;
-        while (groupEnd < notesToPlay.length &&
-               Math.abs(notesToPlay[groupEnd].time - notesToPlay[currentNoteIndex].time) < groupThreshold) {
-          groupEnd++;
+      // Se simplifica: se utiliza una sola nota por cada toque
+      if (notesToPlay.length > 0) {
+        var note = notesToPlay[currentNoteIndex];
+        if (pedalOn) {
+          playPianoNote(effectiveGain, note.noteNumber);
+        } else {
+          activeNotes[e.pointerId] = [playNoteNonPedal(effectiveGain, note.noteNumber)];
         }
-        for (var i = currentNoteIndex; i < groupEnd; i++) {
-          var note = notesToPlay[i];
-          if (pedalOn) {
-            playPianoNote(effectiveGain, note.noteNumber);
-          } else {
-            notesArray.push(playNoteNonPedal(effectiveGain, note.noteNumber));
-          }
-        }
-        currentNoteIndex = groupEnd;
-        if (currentNoteIndex >= notesToPlay.length) {
-          currentNoteIndex = 0;
-        }
+        currentNoteIndex = (currentNoteIndex + 1) % notesToPlay.length;
       } else {
         if (pedalOn) {
           playPianoNote(effectiveGain, defaultMidiNote);
         } else {
-          notesArray.push(playNoteNonPedal(effectiveGain, defaultMidiNote));
+          activeNotes[e.pointerId] = [playNoteNonPedal(effectiveGain, defaultMidiNote)];
         }
-      }
-      if (!pedalOn) {
-        activeNotes[e.pointerId] = notesArray;
       }
     }
 
-    // Al levantar el dedo (pointerup o touchend)
     function handlePointerUp(e) {
-      // Comentamos estas líneas para evitar problemas con toques rápidos
-      // if (e.target.releasePointerCapture) {
-      //   e.target.releasePointerCapture(e.pointerId);
-      // }
       if (!pedalOn && activeNotes[e.pointerId]) {
         activeNotes[e.pointerId].forEach(function(noteObj) {
           noteObj.stop();
@@ -456,7 +432,7 @@
       }
     }
 
-    // Asignación de eventos
+    // Asignación de eventos en touchBox
     var touchBox = document.getElementById('touchBox');
     if (window.PointerEvent) {
       touchBox.addEventListener('pointerdown', handlePointerDown);
@@ -489,6 +465,10 @@
       });
       touchBox.addEventListener('click', handlePointerDown);
     }
+
+    // Agregar listeners a nivel de documento para asegurar que se capten todos los eventos de finalización
+    document.addEventListener('pointerup', handlePointerUp);
+    document.addEventListener('touchend', handlePointerUp);
 
     // Reanudar AudioContext en caso de suspensión
     document.addEventListener('click', function() {
