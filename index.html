@@ -44,7 +44,7 @@
       margin-top: -10px;
       font-size: 0.9em;
     }
-    /* Cuadro de toque: fondo negro, dividido visualmente en 6 franjas iguales mediante líneas horizontales */
+    /* Cuadro de toque: fondo negro, dividido en 6 franjas iguales */
     #touchBox {
       width: 100%;
       height: 400px;
@@ -53,7 +53,7 @@
       display: flex;
       flex-direction: column;
     }
-    /* Franjas de la regla de dinámica: ahora con nombres completos en blanco y sin posibilidad de selección */
+    /* Contenedor para la regla de dinámica: franjas horizontales con nombres completos, en blanco y sin selección de texto */
     #dynamicMarkingsContainer {
       width: 100%;
       height: 100%;
@@ -174,7 +174,7 @@
     var audioContext = new (window.AudioContext || window.webkitAudioContext)();
     var pianoInstrument = null;
     if (window.Soundfont && typeof window.Soundfont.instrument === 'function') {
-      // Usamos la URL raw y especificamos el formato 'sf2'
+      // Usamos la URL raw de GitHub y especificamos el formato 'sf2'
       window.Soundfont.instrument(
         audioContext,
         'https://github.com/rafgim2/PRUEBAS/raw/refs/heads/main/GeneralUser%20GS%20XG%20v1.471.sf2',
@@ -201,9 +201,7 @@
       return noteNames[midi % 12] + octave;
     }
     
-    // Usamos una fórmula continua para calcular el gain:
-    // gain = minGain + (maxGain - minGain) * (1 - relativeY)
-    // Donde minGain = 0.15 y maxGain = 1.0.
+    // Calcula el gain de forma continua (0.15 para toques en la parte inferior y 1.0 en la parte superior)
     function computeEffectiveGain(relativeY) {
       var minGain = 0.15;
       var maxGain = 1.0;
@@ -258,7 +256,7 @@
     
     // Cargar MIDI por defecto
     function loadDefaultMidi() {
-      const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/PRUEBAS/main/Beethoven%20Para%20Elisa.mid";
+      const defaultMidiUrl = "https://github.com/rafgim2/PRUEBAS/raw/refs/heads/main/Beethoven%20Para%20Elisa.mid";
       const defaultFileName = "Beethoven Para Elisa.mid";
       loadMidiFromUrl(defaultMidiUrl, defaultFileName);
     }
@@ -290,7 +288,7 @@
     document.getElementById('sampleSongs').addEventListener('change', function() {
       if (this.value) {
         const fileName = this.value;
-        const url = "https://raw.githubusercontent.com/rafgim2/PRUEBAS/main/" + encodeURIComponent(fileName);
+        const url = "https://github.com/rafgim2/PRUEBAS/raw/refs/heads/main/" + encodeURIComponent(fileName);
         loadMidiFromUrl(url, fileName);
       }
     });
@@ -305,14 +303,13 @@
       var rect = e.currentTarget.getBoundingClientRect();
       var y = (e.touches && e.touches.length > 0) ? e.touches[0].clientY : e.clientY;
       var relativeY = (y - rect.top) / rect.height;
-      // Calcular el gain de forma continua según la posición
       var effectiveGain = computeEffectiveGain(relativeY);
       console.log("relativeY:", relativeY, "effectiveGain:", effectiveGain);
       
       // Cambiar el fondo del body a un color aleatorio
       document.body.style.backgroundColor = getRandomColor();
       
-      // Reproducir notas agrupadas usando el gain calculado
+      // Reproducir notas (agrupadas) usando el gain calculado
       if (notesToPlay.length > 0 && currentNoteIndex < notesToPlay.length) {
         var groupThreshold = 0.001;
         var groupEnd = currentNoteIndex + 1;
