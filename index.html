@@ -308,7 +308,7 @@
 
     // Cargar el archivo MIDI por defecto usando la URL proporcionada (GitHub raw)
     function loadDefaultMidi() {
-      const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/DreamTouch/main/Beethoven%20Para%20Elisa.mid";
+      const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/Beethoven Para Elisa.mid";
       const defaultFileName = "Beethoven Para Elisa.mid";
       loadMidiFromUrl(defaultMidiUrl, defaultFileName);
     }
@@ -341,7 +341,7 @@
       if (this.value) {
         const fileName = this.value;
         // Usamos la URL base de GitHub raw para los MIDI de muestra
-        const url = "https://raw.githubusercontent.com/rafgim2/DreamTouch/main/" + encodeURIComponent(fileName);
+        const url = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/" + encodeURIComponent(fileName);
         loadMidiFromUrl(url, fileName);
       }
     });
