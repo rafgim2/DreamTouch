@@ -9,14 +9,14 @@
   <script>
     window.require = function() {};
   </script>
-  <!-- Scripts MIDI y soundfont (usando versión 0.12.0 desde cdn.jsdelivr.net) -->
+  <!-- Scripts MIDI y soundfont (versión 0.12.0 desde cdn.jsdelivr.net) -->
   <script src="https://cdn.jsdelivr.net/npm/webmidiapishim"></script>
   <script src="https://cdn.jsdelivr.net/npm/webmidi@2"></script>
   <script src="https://cdn.jsdelivr.net/gh/gasman/jasmid@master/stream.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/gasman/jasmid@master/midifile.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/soundfont-player@0.12.0/dist/soundfont-player.min.js"></script>
   <style>
-    /* Fondo blanco y evitar scroll/zoom accidental */
+    /* Fondo blanco y bloquear scroll/zoom */
     body {
       background-color: #FFFFFF;
       margin: 0;
@@ -27,13 +27,13 @@
       height: 100vh;
       transition: background-color 0.3s ease;
     }
-    /* Contenedor principal centrado con borde amarillo */
+    /* Contenedor principal centrado con borde negro */
     #container {
       position: relative;
       display: flex;
       flex-direction: column;
       align-items: center;
-      border: 6px black;
+      border: 6px solid black;
       padding: 30px;
       background-color: #FFFFFF;
       color: black;
@@ -86,7 +86,7 @@
       align-items: center;
       justify-content: center;
       border-bottom: 1px solid white;
-      font-size: 1.2em;
+      font-size: 0.8em;
       color: white;
       user-select: none;
     }
@@ -147,7 +147,7 @@
     <div id="copyright">
       <a href="https://www.youtube.com/@rafgim" target="_blank" style="color: inherit; text-decoration: none;">© By Rafael Gimeno</a>
     </div>
-    <!-- Área de toque -->
+    <!-- Área de toque dividida en franjas dinámicas -->
     <div id="touchBox">
       <div id="dynamicMarkingsContainer">
         <div>Fortissimo</div>
@@ -168,18 +168,9 @@
         <label for="sampleSongs">Canciones de muestra:</label>
         <select id="sampleSongs">
           <option value="">-- Selecciona una canción --</option>
-          <option value="Bach Minueto.mid">Bach - Minueto.mid</option>
-          <option value="Bach Musette.mid">Bach - Musette.mid</option>
-          <option value="Beethoven Claro de luna.mid">Beethoven - Claro de luna.mid</option>
-          <option value="Beethoven Para Elisa.mid">Beethoven - Para Elisa.mid</option>
-          <option value="Beethoven Patética.mid">Beethoven - Patética.mid</option>
-          <option value="Clementi Sonatina.mid">Clementi - Sonatina.mid</option>
-          <option value="Mozart Sonata KV 545 2nd Mov.mid">Mozart - Sonata KV 545 2nd Mov.mid</option>
-          <option value="Gustavo Pascual Paquito el chocolatero.mid">Gustavo Pascual - Paquito el chocolatero.mid</option>
-          <option value="Handel & Halvorsen Passacaglia.mid">Handel & Halvorsen - Passacaglia.mid</option>
-          <option value="R.Korsakov El vuelo del moscardón.mid">R.Korsakov - El vuelo del moscardón.mid</option>
-          <option value="Rachmaninoff Concert nº2 Tercer mov.mid">Rachmaninoff - Concert nº2 Tercer mov.mid</option>
-          <option value="Satie Gymnopedie n1.mid">Satie - Gymnopedie n1.mid</option>
+          <!-- Utilizamos la dirección que proporcionaste para el MIDI de muestra -->
+          <option value="Beethoven Para Elisa.mid">Beethoven Para Elisa.mid</option>
+          <!-- Puedes agregar más opciones si lo deseas -->
         </select>
       </div>
       <div id="fileName"></div>
@@ -194,22 +185,24 @@
     // CONFIGURACIÓN DEL AUDIO
     var audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-    // Creamos dos filtros para "suavizar" el sonido: un filtro highpass para eliminar frecuencias bajas y uno lowpass para eliminar altas
+    // Creamos dos filtros para "suavizar" el sonido: 
+    // Highpass para eliminar frecuencias muy bajas y Lowpass para eliminar altas.
     var highpass = audioContext.createBiquadFilter();
     highpass.type = "highpass";
-    highpass.frequency.value = 200; // elimina frecuencias por debajo de 200 Hz
+    highpass.frequency.value = 200; // Elimina frecuencias por debajo de 200 Hz
 
     var lowpass = audioContext.createBiquadFilter();
     lowpass.type = "lowpass";
-    lowpass.frequency.value = 1500; // elimina frecuencias por encima de 1500 Hz
+    lowpass.frequency.value = 1500; // Elimina frecuencias por encima de 1500 Hz
 
-    // Encadenamos los filtros: highpass -> lowpass -> destination
+    // Encadenamos los filtros: Highpass -> Lowpass -> destino final
     highpass.connect(lowpass);
     lowpass.connect(audioContext.destination);
 
+    // Variable para el instrumento de piano
     var pianoInstrument = null;
     if (window.Soundfont && typeof window.Soundfont.instrument === 'function') {
-      // Cargamos el instrumento "acoustic_grand_piano" del paquete MusyngKite sin especificar destino
+      // Cargamos el piano "acoustic_grand_piano" usando el paquete MusyngKite pre-renderizado.
       Soundfont.instrument(audioContext, 'acoustic_grand_piano', { soundfont: 'MusyngKite' })
         .then(function(piano) {
           pianoInstrument = piano;
@@ -222,7 +215,7 @@
       console.error("No se encontró el método instrument en Soundfont.");
     }
 
-    // Duración de las notas: 4 segundos
+    // Configuramos la duración de cada nota: 10 segundos
     var noteDuration = 10.0;
     var defaultMidiNote = 60; // C4
 
@@ -240,23 +233,26 @@
       return minGain + (maxGain - minGain) * (1 - relativeY);
     }
 
-    // Función para reproducir nota con fade out:
-    // Cada nota se reproducirá 4 segundos; durante los últimos 2 segundos se reducirá su volumen hasta 0.
+    // Función para reproducir una nota con fade out de 2 segundos
     function playPianoNote(gain, midiNote) {
       if (pianoInstrument) {
         var noteName = midiNoteToNoteName(midiNote);
-        // Se reproduce la nota con duración 4s, pero sin conectarla aún a la cadena de audio.
-        var source = pianoInstrument.play(noteName, audioContext.currentTime, { gain: gain, duration: noteDuration, velocity: gain * 127 });
-        // Creamos un GainNode para controlar el fade out.
+        // Reproducimos la nota con duración de 10 segundos y pasamos el parámetro velocity
+        var source = pianoInstrument.play(noteName, audioContext.currentTime, { 
+          gain: gain, 
+          duration: noteDuration, 
+          velocity: gain * 127 
+        });
+        // Creamos un GainNode para programar el fade out
         var noteGain = audioContext.createGain();
         noteGain.gain.setValueAtTime(gain, audioContext.currentTime);
-        // Desconectamos la conexión automática y conectamos manualmente:
+        // Desconectamos la conexión automática y conectamos a nuestro GainNode
         source.disconnect();
         source.connect(noteGain);
-        // Programamos el fade out: mantenemos el gain inicial hasta 2 segundos, luego linealmente a 0 a los 4 segundos.
-        noteGain.gain.setValueAtTime(gain, audioContext.currentTime + 6);
+        // Mantenemos el gain constante hasta los 8 segundos y luego se hace fade out a 0 en 2 segundos (hasta 10 segundos)
+        noteGain.gain.setValueAtTime(gain, audioContext.currentTime + 8);
         noteGain.gain.linearRampToValueAtTime(0, audioContext.currentTime + 10);
-        // Conectamos la salida del GainNode a la cadena de filtros.
+        // Conectamos la salida del GainNode a la cadena de filtros
         noteGain.connect(highpass);
         console.log("Nota reproducida:", noteName, "gain:", gain, "velocity:", gain * 127);
       } else {
@@ -264,7 +260,7 @@
       }
     }
 
-    // --- Evento para cargar archivo MIDI desde input ---
+    // --- Evento para cargar un archivo MIDI desde el input ---
     document.getElementById('midiFile').addEventListener('change', function(e) {
       document.getElementById('fileName').textContent = e.target.files[0].name;
       var reader = new FileReader();
@@ -299,9 +295,9 @@
         .catch(error => console.error("Error al cargar el MIDI:", error));
     }
 
-    // Cargar archivo MIDI por defecto
+    // Cargar un archivo MIDI por defecto usando la URL proporcionada
     function loadDefaultMidi() {
-      const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/Beethoven Para Elisa.mid";
+      const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/Beethoven%20Para%20Elisa.mid";
       const defaultFileName = "Beethoven Para Elisa.mid";
       loadMidiFromUrl(defaultMidiUrl, defaultFileName);
     }
@@ -333,6 +329,7 @@
     document.getElementById('sampleSongs').addEventListener('change', function() {
       if (this.value) {
         const fileName = this.value;
+        // La URL se forma usando la dirección base de tu Netlify si se desea; pero en este caso, para el MIDI de muestra usamos la URL directa de GitHub
         const url = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/" + encodeURIComponent(fileName);
         loadMidiFromUrl(url, fileName);
       }
@@ -385,6 +382,7 @@
       touchBox.addEventListener('click', handleTouch);
     }
 
+    // Reanudar AudioContext si está suspendido
     document.addEventListener('click', function() {
       if (audioContext.state === 'suspended') {
         audioContext.resume().then(() => {
@@ -393,13 +391,13 @@
       }
     });
 
-    // Evento para alternar pantalla completa
+    // Pantalla completa
     var fullscreenBtn = document.getElementById('fullscreenBtn');
     fullscreenBtn.addEventListener('click', function(e) {
       var elem = document.getElementById('container');
       if (!document.fullscreenElement) {
         elem.requestFullscreen().then(() => {
-          fullscreenBtn.textContent = "×";
+          fullscreenBtn.textContent = "×"; // Indicador para salir
         }).catch(err => {
           console.error("Error al activar pantalla completa:", err);
         });
@@ -410,7 +408,6 @@
       }
       e.stopPropagation();
     });
-
     document.addEventListener('fullscreenchange', function() {
       if (!document.fullscreenElement) {
         fullscreenBtn.textContent = "⛶";
