@@ -16,7 +16,7 @@
   <script src="https://cdn.jsdelivr.net/gh/gasman/jasmid@master/midifile.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/soundfont-player@0.12.0/dist/soundfont-player.min.js"></script>
   <style>
-    /* Bloquea scroll en la página y en toques (touch-action none) */
+    /* Fondo blanco, bloquea scroll/zoom y deshabilita desplazamiento */
     body {
       background-color: #FFFFFF;
       margin: 0;
@@ -66,7 +66,6 @@
       z-index: 10;
     }
     /* Área de toque: fondo negro, dividido en 6 franjas */
-    /* Se añade touch-action: none para capturar todos los eventos táctiles */
     #touchBox {
       width: 100%;
       height: 400px;
@@ -74,7 +73,6 @@
       display: flex;
       flex-direction: column;
       position: relative;
-      touch-action: none;
     }
     /* Franjas dinámicas: nombres en blanco, sin selección */
     #dynamicMarkingsContainer {
@@ -116,7 +114,7 @@
       border-radius: 5px;
       cursor: pointer;
     }
-    /* Selector de canciones */
+    /* El selector de canciones y su contenedor mantienen estilos originales */
     #sampleSongsContainer {
       display: flex;
       flex-direction: column;
@@ -137,14 +135,13 @@
       font-style: italic;
       margin-top: -10px;
       color: black;
-      text-align: center;
     }
-    /* Botón del pedal reducido al 50% del tamaño original */
+    /* Botón de pedal ajustado: tamaño reducido a la mitad */
     #pedalBtn {
       background-color: #ADD8E6;
       color: white;
-      padding: 5px 10px;  /* reducción de padding */
-      font-size: 0.8em;   /* tamaño de fuente reducido */
+      padding: 5px 10px;
+      font-size: 0.8em;
       border: none;
       border-radius: 5px;
       cursor: pointer;
@@ -194,14 +191,19 @@
           <option value="Satie Gymnopedie n1.mid">Satie - Gymnopedie n1.mid</option>
         </select>
       </div>
-      <!-- Nombre de la canción cargada -->
+      <!-- Se muestra el nombre del archivo cargado -->
       <div id="fileName"></div>
-      <!-- Botón de Pedal (ahora reducido y debajo del nombre de la canción) -->
+      <!-- Botón de pedal posicionado debajo del nombre del archivo -->
       <button id="pedalBtn">Pedal OFF</button>
     </div>
   </div>
 
   <script>
+    // Bloquear scroll adicional en dispositivos táctiles
+    document.addEventListener("touchmove", function(e) {
+      e.preventDefault();
+    }, { passive: false });
+
     // VARIABLES PARA LAS NOTAS MIDI
     var notesToPlay = [];
     var currentNoteIndex = 0;
@@ -396,7 +398,7 @@
     function handlePointerDown(e) {
       // Evitar múltiples disparos con mouse
       if (e.pointerType === "mouse" && e.buttons !== 1) return;
-      // Si el navegador soporta pointer capture, se asigna al inicio del toque
+      // Uso de pointer capture si está disponible
       if (e.target.setPointerCapture) {
         e.target.setPointerCapture(e.pointerId);
       }
@@ -454,11 +456,11 @@
     // Asignación de eventos
     var touchBox = document.getElementById('touchBox');
     if (window.PointerEvent) {
-      touchBox.addEventListener('pointerdown', handlePointerDown, { passive: false });
+      touchBox.addEventListener('pointerdown', handlePointerDown);
       touchBox.addEventListener('pointerup', handlePointerUp);
       touchBox.addEventListener('pointercancel', handlePointerUp);
     } else {
-      // Fallback para dispositivos táctiles
+      // Fallback para dispositivos táctiles: se asigna un ID único basado en el identificador del toque
       touchBox.addEventListener('touchstart', function(e) {
         e.preventDefault();
         Array.from(e.changedTouches).forEach(function(touch) {
@@ -471,7 +473,7 @@
           };
           handlePointerDown(fakeEvent);
         });
-      }, { passive: false });
+      });
       touchBox.addEventListener('touchend', function(e) {
         Array.from(e.changedTouches).forEach(function(touch) {
           var fakeEvent = {
