@@ -2,26 +2,24 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <!-- Meta viewport con user-scalable=no para evitar zoom accidental -->
+  <!-- Meta viewport para evitar zoom accidental -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>DreamTouch</title>
   <!-- Shim para evitar error de require -->
   <script>
     window.require = function() {};
   </script>
-  <!-- Scripts MIDI y soundfont (versión 0.12.0 desde cdn.jsdelivr.net) -->
+  <!-- Scripts MIDI y soundfont -->
   <script src="https://cdn.jsdelivr.net/npm/webmidiapishim"></script>
   <script src="https://cdn.jsdelivr.net/npm/webmidi@2"></script>
   <script src="https://cdn.jsdelivr.net/gh/gasman/jasmid@master/stream.js"></script>
   <script src="https://cdn.jsdelivr.net/gh/gasman/jasmid@master/midifile.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/soundfont-player@0.12.0/dist/soundfont-player.min.js"></script>
   <style>
-    /* Aplicar zoom out a toda la página */
     html {
       transform: scale(0.9);
       transform-origin: top center;
     }
-    /* Fondo blanco y bloquea scroll/zoom */
     body {
       background-color: #FFFFFF;
       margin: 0;
@@ -30,33 +28,39 @@
       justify-content: center;
       align-items: center;
       height: 100vh;
+      padding-top: 10px;
       transition: background-color 0.3s ease;
     }
-    /* Contenedor principal centrado con borde negro */
     #container {
       position: relative;
       display: flex;
       flex-direction: column;
-      align-items: center;
+      align-items: flex-start;
       border: 6px solid black;
       padding: 30px;
       background-color: #FFFFFF;
+ 
+      padding-top: -10px;
       color: black;
       width: 350px;
+      height:850px;
       box-sizing: border-box;
+      z-index: 1;
     }
     h1 {
       margin: 0 0 20px 0;
+       margin-top:0px;
       font-size: 2.8em;
       text-align: center;
     }
     #copyright {
-      margin-bottom: 20px;
-      margin-top: -20px;
-      font-size: 0.9em;
-      color: blue;
-    }
-    /* Botón de pantalla completa en esquina superior derecha */
+  margin-bottom: 20px;
+  margin-top: -20px;
+  font-size: 0.9em;
+  color: blue;
+  width: 100%;
+  text-align: center;
+}
     #fullscreenBtn {
       position: absolute;
       top: 10px;
@@ -69,7 +73,6 @@
       cursor: pointer;
       z-index: 10;
     }
-    /* Área de toque: fondo negro, dividido en 6 franjas */
     #touchBox {
       width: 100%;
       height: 400px;
@@ -78,7 +81,6 @@
       flex-direction: column;
       position: relative;
     }
-    /* Franjas dinámicas: nombres en blanco, sin selección */
     #dynamicMarkingsContainer {
       width: 100%;
       height: 100%;
@@ -101,7 +103,6 @@
     #dynamicMarkingsContainer > div:last-child {
       border-bottom: none;
     }
-    /* Controles inferiores: mayor separación vertical */
     #buttons {
       margin-top: 40px;
       display: flex;
@@ -110,37 +111,34 @@
       gap: 10px;
       width: 100%;
     }
-    /* Botón de cargar: fondo verde claro, texto negro */
     #loadButton {
       background-color: #90EE90;
       color: black;
       padding: 10px 20px;
       font-size: 1em;
+      margin-top:5px;
       border: none;
       border-radius: 5px;
       cursor: pointer;
     }
-    /* Botón del pedal: fondo verde claro (activo por defecto), texto negro y tamaño reducido */
     #pedalBtn {
       background-color: #90EE90;
       color: black;
       padding: 5px 10px;
       font-size: 0.9em;
+      margin-bottom:40px;
       border: none;
       border-radius: 5px;
       cursor: pointer;
     }
-    /* Ocultar input */
     #midiFile {
       display: none;
     }
-    /* Nombre del archivo en cursiva y negro */
     #fileName {
       font-style: italic;
       margin-top: -10px;
       color: black;
     }
-    /* Selector de canciones */
     #sampleSongsContainer {
       display: flex;
       flex-direction: column;
@@ -156,17 +154,21 @@
       border: none;
       text-align: center;
     }
+    canvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+    }
   </style>
 </head>
 <body>
+  <!-- Interfaz tradicional (oculta en AR) -->
   <div id="container">
-    <!-- Botón de pantalla completa -->
     <button id="fullscreenBtn">⛶</button>
     <h1>DreamTouch</h1>
     <div id="copyright">
-      <a href="https://www.youtube.com/@rafgim" target="_blank" style="color: inherit; text-decoration: none;">© By Rafael Gimeno</a>
+      <a href="https://www.youtube.com/@rafgim" target="_blank" style="color: inherit; text-decoration: none; ">© By Rafael Gimeno</a>
     </div>
-    <!-- Área de toque -->
     <div id="touchBox">
       <div id="dynamicMarkingsContainer">
         <div>Fortissimo</div>
@@ -177,7 +179,6 @@
         <div>Pianissimo</div>
       </div>
     </div>
-    <!-- Controles inferiores -->
     <div id="buttons">
       <label for="midiFile" id="loadButton">
         Cargar Archivo MIDI
@@ -190,13 +191,12 @@
           <option value="Beethoven Para Elisa.mid">Beethoven Para Elisa.mid</option>
           <option value="Beethoven Patética.mid">Beethoven - Patética.mid</option>
           <option value="Handel & Halvorsen Passacaglia.mid">Handel & Halvorsen - Passacaglia.mid</option>
-          <option value="R.Korsakov El vuelo del moscardón.mid">R.Korsakov - El vuelo del moscardón.mid</option>
+          <option value="R.Korsakov El vuelo del moscardón.mid">R-Korsakov - El vuelo del moscardón.mid</option>
           <option value="Rachmaninoff Concert nº2 Tercer mov.mid">Rachmaninoff - Concert nº2 Tercer mov.mid</option>
           <option value="Satie Gymnopedie n1.mid">Satie - Gymnopedie n1.mid</option>
         </select>
       </div>
       <div id="fileName"></div>
-      <!-- Botón de pedal al final -->
       <button id="pedalBtn">Pedal ON</button>
     </div>
   </div>
@@ -209,7 +209,7 @@
     // CONFIGURACIÓN DEL AUDIO
     var audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-    // Filtros para suavizar el sonido:
+    // Filtros para suavizar el sonido
     var highpass = audioContext.createBiquadFilter();
     highpass.type = "highpass";
     highpass.frequency.value = 200;
@@ -219,7 +219,7 @@
     highpass.connect(lowpass);
     lowpass.connect(audioContext.destination);
 
-    // Variable para el instrumento
+    // Cargar el instrumento (Soundfont)
     var pianoInstrument = null;
     if (window.Soundfont && typeof window.Soundfont.instrument === 'function') {
       Soundfont.instrument(audioContext, 'acoustic_grand_piano', { soundfont: 'MusyngKite' })
@@ -234,30 +234,23 @@
       console.error("No se encontró el método instrument en Soundfont.");
     }
 
-    // Nota por defecto
     var defaultMidiNote = 60; // C4
-    // Duración usada en modo PEDAL (fade out automático)
     var noteDuration = 3.0;
-    // Pedal activado por defecto
     var pedalOn = true;
-    // Objeto para almacenar las notas activas en modo SIN PEDAL (clave: id único por toque)
     var activeNotes = {};
 
-    // Función para convertir número MIDI a nombre (ej. "C4")
     function midiNoteToNoteName(midi) {
       var octave = Math.floor(midi / 12) - 1;
       var noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
       return noteNames[midi % 12] + octave;
     }
 
-    // Cálculo del gain según posición vertical
     function computeEffectiveGain(relativeY) {
-      var minGain = 0.15;
-      var maxGain = 1.0;
+      var minGain = 0.55;
+      var maxGain = 1.5;
       return minGain + (maxGain - minGain) * (1 - relativeY);
     }
 
-    // Reproducción en modo PEDAL ON (comportamiento original)
     function playPianoNote(gain, midiNote) {
       if (pianoInstrument) {
         var noteName = midiNoteToNoteName(midiNote);
@@ -279,13 +272,12 @@
       }
     }
 
-    // Reproducción en modo SIN PEDAL: la nota se mantiene hasta detenerse manualmente
     function playNoteNonPedal(gain, midiNote) {
       if (pianoInstrument) {
         var noteName = midiNoteToNoteName(midiNote);
         var source = pianoInstrument.play(noteName, audioContext.currentTime, {
           gain: gain,
-          duration: 100, // duración larga para mantener la nota
+          duration: 100,
           velocity: gain * 127
         });
         var noteGain = audioContext.createGain();
@@ -311,7 +303,6 @@
       }
     }
 
-    // Cargar archivo MIDI desde input
     document.getElementById('midiFile').addEventListener('change', function(e) {
       document.getElementById('fileName').textContent = e.target.files[0].name;
       var reader = new FileReader();
@@ -326,7 +317,6 @@
       reader.readAsBinaryString(e.target.files[0]);
     });
 
-    // Cargar MIDI desde URL
     function loadMidiFromUrl(url, fileName) {
       fetch(url)
         .then(response => response.arrayBuffer())
@@ -346,14 +336,12 @@
         .catch(error => console.error("Error al cargar el MIDI:", error));
     }
 
-    // Cargar MIDI por defecto
     function loadDefaultMidi() {
       const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/Handel & Halvorsen Passacaglia.mid";
       const defaultFileName = "Handel & Halvorsen Passacaglia.mid";
       loadMidiFromUrl(defaultMidiUrl, defaultFileName);
     }
 
-    // Extraer notas del archivo MIDI
     function extractNotesFromMidi(midi) {
       notesToPlay = [];
       currentNoteIndex = 0;
@@ -376,7 +364,6 @@
       console.log("Notas MIDI extraídas:", notesToPlay);
     }
 
-    // Selector de canciones de muestra
     document.getElementById('sampleSongs').addEventListener('change', function() {
       if (this.value) {
         const fileName = this.value;
@@ -385,48 +372,26 @@
       }
     });
 
-    // Función auxiliar para generar un color aleatorio
-    function getRandomColor() {
-      return '#' + Math.floor(Math.random() * 16777215).toString(16);
-    }
-
-    // Manejo de eventos de toque/puntero
-
-    // Al presionar (pointerdown o touchstart)
     function handlePointerDown(e) {
-      // Evitar múltiples disparos con mouse
       if (e.pointerType === "mouse" && e.buttons !== 1) return;
-      
-      // Obtener posición y calcular gain
       var rect = e.currentTarget.getBoundingClientRect();
       var y = e.clientY;
       var relativeY = (y - rect.top) / rect.height;
       var effectiveGain = computeEffectiveGain(relativeY);
-      
-      // Generar un color aleatorio y asignarlo al fondo
       var randomColor = getRandomColor();
       document.body.style.backgroundColor = randomColor;
-      
-      // Obtener el contenedor de las franjas
       var dynamicContainer = document.getElementById('dynamicMarkingsContainer');
       var rows = dynamicContainer.children;
-      
-      // Reiniciar todas las filas a negro
       for (var i = 0; i < rows.length; i++) {
         rows[i].style.backgroundColor = 'black';
       }
-      
-      // Determinar cuál fila fue tocada según la posición
       var containerRect = dynamicContainer.getBoundingClientRect();
       var relativeYInContainer = (e.clientY - containerRect.top) / containerRect.height;
       var rowIndex = Math.floor(relativeYInContainer * rows.length);
       if (rowIndex < 0 || rowIndex >= rows.length) {
         rowIndex = 0;
       }
-      // Asignar el color aleatorio a la fila tocada
       rows[rowIndex].style.backgroundColor = randomColor;
-      
-      // Reproducir nota(s)
       var notesArray = [];
       if (notesToPlay.length > 0 && currentNoteIndex < notesToPlay.length) {
         var groupThreshold = 0.001;
@@ -459,7 +424,6 @@
       }
     }
 
-    // Al levantar el dedo (pointerup o touchend)
     function handlePointerUp(e) {
       if (!pedalOn && activeNotes[e.pointerId]) {
         activeNotes[e.pointerId].forEach(function(noteObj) {
@@ -469,14 +433,12 @@
       }
     }
 
-    // Asignación de eventos
     var touchBox = document.getElementById('touchBox');
     if (window.PointerEvent) {
       touchBox.addEventListener('pointerdown', handlePointerDown);
       touchBox.addEventListener('pointerup', handlePointerUp);
       touchBox.addEventListener('pointercancel', handlePointerUp);
     } else {
-      // Fallback para dispositivos táctiles
       touchBox.addEventListener('touchstart', function(e) {
         e.preventDefault();
         Array.from(e.changedTouches).forEach(function(touch) {
@@ -503,7 +465,6 @@
       touchBox.addEventListener('click', handlePointerDown);
     }
 
-    // Reanudar AudioContext en caso de suspensión
     document.addEventListener('click', function() {
       if (audioContext.state === 'suspended') {
         audioContext.resume().then(() => {
@@ -512,7 +473,6 @@
       }
     });
 
-    // Botón de pantalla completa
     var fullscreenBtn = document.getElementById('fullscreenBtn');
     fullscreenBtn.addEventListener('click', function(e) {
       var elem = document.getElementById('container');
@@ -535,21 +495,390 @@
       }
     });
 
-    // Botón de Pedal para alternar modo
     var pedalBtn = document.getElementById('pedalBtn');
     pedalBtn.addEventListener('click', function() {
       pedalOn = !pedalOn;
       pedalBtn.textContent = pedalOn ? "Pedal ON" : "Pedal OFF";
-      if (pedalOn) {
-        pedalBtn.style.backgroundColor = "#90EE90"; // Verde claro
-      } else {
-        pedalBtn.style.backgroundColor = "#ADD8E6"; // Azul claro original
-      }
+      pedalBtn.style.backgroundColor = pedalOn ? "#90EE90" : "#ADD8E6";
       console.log("Pedal:", pedalOn ? "ON" : "OFF");
     });
 
-    // Cargar MIDI por defecto al iniciar
     window.addEventListener('load', loadDefaultMidi);
+  </script>
+
+  <!-- Código AR usando Three.js y ARButton -->
+  <script type="module">
+    import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.module.js';
+    import { ARButton } from 'https://cdn.jsdelivr.net/npm/three@0.152.2/examples/jsm/webxr/ARButton.js';
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 20);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.xr.enabled = true;
+    // Ocultamos el canvas de AR por defecto
+    renderer.domElement.style.display = 'none';
+    document.body.appendChild(renderer.domElement);
+
+    // Array para almacenar los efectos visuales activos
+    const activeNoteEffects = [];
+
+    // Crear botón AR con soporte para hit-test y hand-tracking
+    const arButton = ARButton.createButton(renderer, {
+      requiredFeatures: ['hit-test'],
+      optionalFeatures: ['hand-tracking']
+    });
+    document.body.appendChild(arButton);
+    // Estilos para el ARButton
+    
+     arButton.style.position = 'absolute';
+arButton.style.bottom = '20px';
+    arButton.style.backgroundColor = '#4B0082';
+    arButton.style.border = 'none';
+    arButton.style.color = 'white';
+    arButton.style.fontSize = '16px';
+
+    // Cuando se inicie la sesión AR, ocultamos el menú y mostramos el canvas AR
+    renderer.xr.addEventListener('sessionstart', () => {
+      document.getElementById('container').style.display = 'none';
+      renderer.domElement.style.display = 'block';
+    });
+    // Al finalizar la sesión AR, volvemos a mostrar el menú y ocultamos el canvas AR
+    renderer.xr.addEventListener('sessionend', () => {
+      document.getElementById('container').style.display = 'flex';
+      renderer.domElement.style.display = 'none';
+    });
+
+    // Agregar ambas manos a la escena
+    const rightHand = renderer.xr.getHand(0);
+    const leftHand  = renderer.xr.getHand(1);
+    scene.add(rightHand);
+    scene.add(leftHand);
+
+    // Agregar controladores para detectar colisiones
+    const controller0 = renderer.xr.getController(0);
+    const controller1 = renderer.xr.getController(1);
+    scene.add(controller0);
+    scene.add(controller1);
+
+    // NUEVA FUNCIONALIDAD:
+    // Variable global para almacenar el último panel activado en AR
+    let lastActivatedARPanel = null;
+
+    // Función para crear un panel en AR: grupo con fondo, texto y collider invisible
+    function createTextPanel(text) {
+      const panelGroup = new THREE.Group();
+      // Panel: ancho 0.15 y altura 0.05
+      const panelWidth = 0.15, panelHeight = 0.05;
+      // Fondo: morado, semitransparente, doble cara
+      const bgGeometry = new THREE.PlaneGeometry(panelWidth, panelHeight);
+      const bgMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x800080, 
+        transparent: true, 
+        opacity: 0.75,
+        side: THREE.DoubleSide 
+      });
+      const bgMesh = new THREE.Mesh(bgGeometry, bgMaterial);
+      bgMesh.renderOrder = 0;
+      panelGroup.add(bgMesh);
+      
+      // Texto: dibujamos las abreviaturas (ff, f, mf, mp, p, pp) en un canvas
+      const canvas = document.createElement('canvas');
+      canvas.width = 256;
+      canvas.height = 64;
+      const context = canvas.getContext('2d');
+      context.clearRect(0, 0, canvas.width, canvas.height);
+      context.font = '32px sans-serif';
+      context.fillStyle = 'white';
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.fillText(text, canvas.width / 2, canvas.height / 2);
+      const textTexture = new THREE.CanvasTexture(canvas);
+      const textMaterial = new THREE.MeshBasicMaterial({ 
+        map: textTexture, 
+        transparent: true,
+        side: THREE.DoubleSide,
+        polygonOffset: true,
+        polygonOffsetFactor: -1,
+        polygonOffsetUnits: -1
+      });
+      textMaterial.depthTest = false;
+      
+      const textGeometry = new THREE.PlaneGeometry(panelWidth, panelHeight);
+      const textMesh = new THREE.Mesh(textGeometry, textMaterial);
+      textMesh.position.z = 0.005;
+      textMesh.renderOrder = 2;
+      panelGroup.add(textMesh);
+      
+      // Collider invisible para detección (20% mayor)
+      const colliderGeometry = new THREE.PlaneGeometry(panelWidth * 1.2, panelHeight * 0.2);
+      const colliderMaterial = new THREE.MeshBasicMaterial({ 
+        color: 0x000000, 
+        opacity: 0, 
+        transparent: true 
+      });
+      colliderMaterial.colorWrite = false;
+      const colliderMesh = new THREE.Mesh(colliderGeometry, colliderMaterial);
+      colliderMesh.position.z = 0.02;
+      colliderMesh.renderOrder = 1;
+      panelGroup.add(colliderMesh);
+      
+      panelGroup.userData.bgMaterial = bgMaterial;
+      return panelGroup;
+    }
+
+    // Crear los paneles y ubicarlos en un arco frente al usuario.
+    const panelTexts = ["ff", "f", "mf", "mp", "p", "pp"];
+    const panels = [];
+    const numPanels = panelTexts.length;
+    const radius = 0.8;
+    const arcSpan = Math.PI / 2;
+    const startAngle = -arcSpan / 2;
+    const angleIncrement = arcSpan / (numPanels - 1);
+    const yPos = -0.3;
+    panelTexts.forEach((text, index) => {
+      const angle = startAngle + index * angleIncrement;
+      const x = radius * Math.sin(angle);
+      const z = -radius * Math.cos(angle);
+      const panel = createTextPanel(text);
+      panel.position.set(x, yPos, z);
+
+      panel.rotation.x = -Math.PI / 4;
+      panel.rotation.z = -Math.atan2(panel.position.x, -panel.position.z);
+      panel.lookAt(camera.position);
+
+      scene.add(panel);
+      panels.push(panel);
+    });
+
+    // Función para crear el efecto visual del rectángulo que se eleva
+    function createNoteEffect(panel) {
+      const startPos = new THREE.Vector3();
+      panel.getWorldPosition(startPos);
+      startPos.y += 0.04;
+      const panelColor = panel.userData.bgMaterial.color.getHex();
+      const width = 0.02, height = 0.02;
+      const geometry = new THREE.PlaneGeometry(width, height);
+      const material = new THREE.MeshBasicMaterial({ 
+        color: 0xffffff, 
+        transparent: true, 
+        opacity: 1 
+      });
+      const noteRect = new THREE.Mesh(geometry, material);
+      noteRect.position.copy(startPos);
+      noteRect.lookAt(camera.position);
+      scene.add(noteRect);
+      const totalUpDistance = 2.3;
+      const constantSpeed = 0.1; 
+      const duration = (totalUpDistance / constantSpeed) * 1000;
+      activeNoteEffects.push({
+        noteRect: noteRect,
+        startTime: performance.now(),
+        duration: duration,
+        startPos: startPos.clone(),
+        totalUpDistance: totalUpDistance
+      });
+    }
+
+    // Actualizar efectos visuales cada frame
+    function updateNoteEffects() {
+      const currentTime = performance.now();
+      for (let i = activeNoteEffects.length - 1; i >= 0; i--) {
+        const effect = activeNoteEffects[i];
+        const elapsed = currentTime - effect.startTime;
+        const progress = elapsed / effect.duration;
+        if (progress >= 1) {
+          scene.remove(effect.noteRect);
+          activeNoteEffects.splice(i, 1);
+        } else {
+          effect.noteRect.position.y = effect.startPos.y + progress * effect.totalUpDistance;
+          effect.noteRect.material.opacity = 1 - progress;
+          effect.noteRect.lookAt(camera.position);
+        }
+      }
+    }
+
+    // Se modifica onPanelSelect para almacenar el último panel activado
+    function onPanelSelect(panel) {
+      // Almacenar el último panel activado para la nueva funcionalidad
+      lastActivatedARPanel = panel;
+      const randomColor = new THREE.Color(Math.random(), Math.random(), Math.random());
+      panel.userData.bgMaterial.color.copy(randomColor);
+      setTimeout(() => {
+        panel.userData.bgMaterial.color.set(0x800080);
+      }, 200);
+      createNoteEffect(panel);
+      const panelIndex = panels.indexOf(panel);
+      window.handleARPanelSelect(panelIndex);
+    }
+
+    // Configurar controlador XR para dispositivos con mandos
+    controller0.addEventListener('select', () => {
+      const tempMatrix = new THREE.Matrix4();
+      tempMatrix.identity().extractRotation(controller0.matrixWorld);
+      const raycaster = new THREE.Raycaster();
+      raycaster.ray.origin.setFromMatrixPosition(controller0.matrixWorld);
+      raycaster.ray.direction.set(0, 0, -1).applyMatrix4(tempMatrix);
+      const intersects = raycaster.intersectObjects(panels, true);
+      if (intersects.length > 0) {
+        const selectedPanel = intersects[0].object.parent;
+        onPanelSelect(selectedPanel);
+      }
+    });
+    scene.add(controller0);
+
+    // Los eventos 'squeezestart' se mantienen, por si acaso.
+    controller0.addEventListener('squeezestart', () => {
+      if (lastActivatedARPanel) {
+        onPanelSelect(lastActivatedARPanel);
+      }
+    });
+    controller1.addEventListener('squeezestart', () => {
+      if (lastActivatedARPanel) {
+        onPanelSelect(lastActivatedARPanel);
+      }
+    });
+
+    // Colisiones con las manos
+    function checkHandCollisions() {
+      const threshold = 0.08;
+      const now = performance.now();
+      for (let handIndex = 0; handIndex < 2; handIndex++) {
+        const hand = renderer.xr.getHand(handIndex);
+        if (hand) {
+          let fingerPos = new THREE.Vector3();
+          if (hand.joints) {
+            const indexTip = hand.joints['index-finger-tip'];
+            if (indexTip) {
+              indexTip.getWorldPosition(fingerPos);
+            } else if (hand.children.length > 0) {
+              hand.children[0].getWorldPosition(fingerPos);
+            }
+          } else if (hand.children.length > 0) {
+            hand.children[0].getWorldPosition(fingerPos);
+          } else {
+            continue;
+          }
+          panels.forEach(panel => {
+            const panelCenter = new THREE.Vector3();
+            panel.getWorldPosition(panelCenter);
+            if (fingerPos.distanceTo(panelCenter) < threshold) {
+              if (!panel.userData.lastActivated || now - panel.userData.lastActivated > 150) {
+                onPanelSelect(panel);
+                panel.userData.lastActivated = now;
+              }
+            }
+          });
+        }
+      }
+    }
+
+    function checkControllerCollisions() {
+      const threshold = 0.12;
+      const now = performance.now();
+      const controllers = [];
+      if (controller0) controllers.push(controller0);
+      if (controller1) controllers.push(controller1);
+      controllers.forEach(ctrl => {
+        let ctrlPos = new THREE.Vector3();
+        ctrl.getWorldPosition(ctrlPos);
+        panels.forEach(panel => {
+          const panelCenter = new THREE.Vector3();
+          panel.getWorldPosition(panelCenter);
+          if (ctrlPos.distanceTo(panelCenter) < threshold) {
+            if (!panel.userData.lastActivated || now - panel.userData.lastActivated > 150) {
+              onPanelSelect(panel);
+              panel.userData.lastActivated = now;
+            }
+          }
+        });
+      });
+    }
+
+    // NUEVA FUNCIONALIDAD: Verificar individualmente el estado de cada botón de cada mando
+    function checkAllControllerButtons() {
+      [controller0, controller1].forEach(ctrl => {
+        if (ctrl && ctrl.gamepad && ctrl.gamepad.buttons) {
+          // Inicializamos un array previo si aún no existe
+          if (!ctrl.userData.prevButtons) {
+            ctrl.userData.prevButtons = new Array(ctrl.gamepad.buttons.length).fill(false);
+          }
+          ctrl.gamepad.buttons.forEach((button, index) => {
+            // Si el botón acaba de pasar de no presionado a presionado
+            if (button.pressed && !ctrl.userData.prevButtons[index]) {
+              if (lastActivatedARPanel) {
+                onPanelSelect(lastActivatedARPanel);
+              }
+            }
+            // Actualizar el estado previo para el siguiente frame
+            ctrl.userData.prevButtons[index] = button.pressed;
+          });
+        }
+      });
+    }
+
+    renderer.domElement.addEventListener('touchstart', (event) => {
+      const touch = event.touches[0];
+      const x = (touch.clientX / window.innerWidth) * 2 - 1;
+      const y = - (touch.clientY / window.innerHeight) * 2 + 1;
+      const raycaster = new THREE.Raycaster();
+      raycaster.setFromCamera(new THREE.Vector2(x, y), camera);
+      const intersects = raycaster.intersectObjects(panels, true);
+      if (intersects.length > 0) {
+        const selectedPanel = intersects[0].object.parent;
+        onPanelSelect(selectedPanel);
+      }
+    });
+
+    function render() {
+      checkHandCollisions();
+      checkControllerCollisions();
+      // Verificar el estado de cada botón en cada frame
+      checkAllControllerButtons();
+      updateNoteEffects();
+      renderer.render(scene, camera);
+    }
+    function animate() {
+      renderer.setAnimationLoop(render);
+    }
+    animate();
+  </script>
+  <script>
+    // Función global para manejar la selección de panel en AR
+    window.handleARPanelSelect = function(panelIndex) {
+      const minGain = 0.15, maxGain = 1.0;
+      const effectiveGain = maxGain - (panelIndex / 5) * (maxGain - minGain);
+      if (notesToPlay.length > 0 && currentNoteIndex < notesToPlay.length) {
+        let groupThreshold = 0.001;
+        let groupEnd = currentNoteIndex + 1;
+        while (groupEnd < notesToPlay.length &&
+               Math.abs(notesToPlay[groupEnd].time - notesToPlay[currentNoteIndex].time) < groupThreshold) {
+          groupEnd++;
+        }
+        for (let i = currentNoteIndex; i < groupEnd; i++) {
+          let note = notesToPlay[i];
+          if (pedalOn) {
+            playPianoNote(effectiveGain, note.noteNumber);
+          } else {
+            playNoteNonPedal(effectiveGain, note.noteNumber);
+          }
+        }
+        currentNoteIndex = groupEnd;
+        if (currentNoteIndex >= notesToPlay.length) {
+          currentNoteIndex = 0;
+        }
+      } else {
+        if (pedalOn) {
+          playPianoNote(effectiveGain, defaultMidiNote);
+        } else {
+          playNoteNonPedal(effectiveGain, defaultMidiNote);
+        }
+      }
+    };
+
+    function getRandomColor() {
+      return '#' + Math.floor(Math.random() * 16777215).toString(16);
+    }
   </script>
 </body>
 </html>
