@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <!-- Meta viewport sin user-scalable para evitar zoom accidental en móviles -->
+  <!-- Meta viewport con user-scalable=no para evitar zoom accidental -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>DreamTouch</title>
   <!-- Shim para evitar error de require -->
@@ -16,16 +16,12 @@
   <script src="https://cdn.jsdelivr.net/gh/gasman/jasmid@master/midifile.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/soundfont-player@0.12.0/dist/soundfont-player.min.js"></script>
   <style>
-    /* Para desktops no aplicar escala; en móviles se aplica scale para ajustar visualmente */
+    /* Aplicar zoom out a toda la página */
     html {
+      transform: scale(0.9);
       transform-origin: top center;
     }
-    @media (max-width: 768px) {
-      html {
-        transform: scale(0.9);
-      }
-    }
-    /* Fondo blanco y bloquear scroll/zoom */
+    /* Fondo blanco y bloquea scroll/zoom */
     body {
       background-color: #FFFFFF;
       margin: 0;
@@ -72,22 +68,6 @@
       font-size: 1em;
       cursor: pointer;
       z-index: 10;
-    }
-    /* ARButton: se posiciona fijo (por ejemplo, en la esquina inferior derecha) */
-    #arButton {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: rgba(0, 0, 0, 0.5);
-      color: white;
-      padding: 10px 15px;
-      font-size: 1em;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      z-index: 10;
-      /* Por defecto se oculta: se mostrará sólo si hay soporte para hand tracking */
-      display: none;
     }
     /* Área de toque: fondo negro, dividido en 6 franjas */
     #touchBox {
@@ -179,9 +159,6 @@
   </style>
 </head>
 <body>
-  <!-- ARButton: se mostrará sólo si el dispositivo soporta hand tracking -->
-  <button id="arButton">Iniciar AR</button>
-
   <div id="container">
     <!-- Botón de pantalla completa -->
     <button id="fullscreenBtn">⛶</button>
@@ -371,7 +348,7 @@
 
     // Cargar MIDI por defecto
     function loadDefaultMidi() {
-      const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/Handel%20&%20Halvorsen%20Passacaglia.mid";
+      const defaultMidiUrl = "https://raw.githubusercontent.com/rafgim2/DreamTwist/main/Handel & Halvorsen Passacaglia.mid";
       const defaultFileName = "Handel & Halvorsen Passacaglia.mid";
       loadMidiFromUrl(defaultMidiUrl, defaultFileName);
     }
@@ -566,31 +543,13 @@
       if (pedalOn) {
         pedalBtn.style.backgroundColor = "#90EE90"; // Verde claro
       } else {
-        pedalBtn.style.backgroundColor = "#ADD8E6"; // Azul claro
+        pedalBtn.style.backgroundColor = "#ADD8E6"; // Azul claro original
       }
       console.log("Pedal:", pedalOn ? "ON" : "OFF");
     });
 
-    // Configuración del ARButton según soporte a hand tracking
-    window.addEventListener('load', function() {
-      loadDefaultMidi();
-
-      // Se muestra el ARButton solo si el navegador soporta WebXR y la API de hand tracking
-      var arButton = document.getElementById('arButton');
-      if (navigator.xr && ('XRHand' in window)) {
-        // Aquí podrías inicializar una sesión AR o llamar a ARButton.createButton si usas Three.js
-        arButton.style.display = "block";
-        arButton.textContent = "Iniciar AR";
-        // Ejemplo: agregar un evento al botón para iniciar una sesión AR
-        arButton.addEventListener('click', function() {
-          console.log("Iniciar sesión AR");
-          // Aquí iría la lógica para arrancar la experiencia AR
-        });
-      } else {
-        arButton.style.display = "none";
-        console.log("WebXR o hand tracking no soportado: ARButton oculto.");
-      }
-    });
+    // Cargar MIDI por defecto al iniciar
+    window.addEventListener('load', loadDefaultMidi);
   </script>
 </body>
 </html>
