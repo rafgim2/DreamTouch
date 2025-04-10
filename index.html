@@ -763,7 +763,7 @@ arButton.style.bottom = '20px';
             const panelCenter = new THREE.Vector3();
             panel.getWorldPosition(panelCenter);
             if (fingerPos.distanceTo(panelCenter) < threshold) {
-              if (!panel.userData.lastActivated || now - panel.userData.lastActivated > 250) {
+              if (!panel.userData.lastActivated || now - panel.userData.lastActivated > 500) {
                 onPanelSelect(panel);
                 panel.userData.lastActivated = now;
               }
